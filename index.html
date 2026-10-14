@@ -913,5 +913,126 @@ function showHistory() {
   `;
 }
 
+function backupMissionControl() {
+  const backup = {};
+
+  Object.keys(localStorage).forEach(function(key) {
+    if (key.startsWith("missionControl")) {
+      backup[key] = localStorage.getItem(key);
+    }
+  });
+
+  const backupText = JSON.stringify(backup, null, 2);
+  const blob = new Blob([backupText], {
+    type: "application/json"
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "Mission-Control-Backup.json";
+  link.click();
+
+  URL.revokeObjectURL(url);
+}
+
+function restoreMissionControl(event) {
+  const file = event.target.files[0];
+
+  if (!file) {
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function() {
+    try {
+      const backup = JSON.parse(reader.result);
+
+      if (
+        !backup ||
+        typeof backup !== "object" ||
+        Array.isArray(backup)
+      ) {
+        throw new Error("Invalid backup");
+      }
+
+      const keys = Object.keys(backup);
+
+if (
+  keys.length === 0 ||
+  !keys.every(key =>
+    key.startsWith("missionControl") &&
+    typeof backup[key] === "string"
+  )
+) {
+  throw new Error("Invalid backup data");
+}
+
+if (!Object.prototype.hasOwnProperty.call(backup, "missionControlMissions")) {
+  throw new Error("Missing Mission Control missions");
+}
+
+try {
+  const savedMissions = JSON.parse(backup.missionControlMissions);
+
+  if (!Array.isArray(savedMissions)) {
+    throw new Error("Invalid missions");
+  }
+} catch (error) {
+  throw new Error("Invalid Mission Control missions");
+}
+
+if (backup.missionControlWeeklyGoals !== undefined) {
+  const savedGoals = JSON.parse(backup.missionControlWeeklyGoals);
+
+  if (!Array.isArray(savedGoals)) {
+    throw new Error("Invalid weekly goals");
+  }
+}
+
+if (backup.missionControlMissionHistory !== undefined) {
+  const savedHistory = JSON.parse(backup.missionControlMissionHistory);
+
+  if (!Array.isArray(savedHistory)) {
+    throw new Error("Invalid mission history");
+  }
+}
+
+if (backup.missionControlTodayPlan !== undefined) {
+  const savedPlan = JSON.parse(backup.missionControlTodayPlan);
+
+  if (!Array.isArray(savedPlan)) {
+    throw new Error("Invalid today's plan");
+  }
+}
+
+const confirmed = confirm(
+  "Restore this backup? This will replace your current Mission Control data on this device."
+);
+
+if (!confirmed) {
+  return;
+}
+
+keys.forEach(function(key) {
+  localStorage.setItem(key, backup[key]);
+});
+
+alert("Mission Control restored successfully!");
+location.reload();      
+    } catch (error) {
+      alert("This is not a valid Mission Control backup file.");
+    }
+  };
+
+  reader.readAsText(file);
+}
+
 </script>
+
+<button onclick="backupMissionControl()">Backup Mission Control</button>
+<button onclick="document.getElementById('restoreFile').click()">Restore Mission Control</button>
+<input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restoreMissionControl(event)">
 
