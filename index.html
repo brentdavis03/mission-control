@@ -1,0 +1,917 @@
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body {
+  margin: 12px;
+  font-family: Arial, sans-serif;
+}
+
+@media (max-width: 600px) {
+  body > button {
+    width: calc(50% - 14px);
+    margin: 5px;
+  }
+}
+
+button {
+  padding: 12px 16px;
+  font-size: 16px;
+  margin: 5px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+input, select, textarea {
+  padding: 12px;
+  font-size: 16px;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #888888;
+  border-radius: 8px;
+}
+
+.card {
+  border: 1px solid #888888;  
+  border-radius: 10px;
+  padding: 12px;
+  margin: 10px 0;
+  background: #ffffff;
+  box-sizing: border-box;
+  width: 100%;
+}
+</style>
+
+<h1>Mission Control</h1>
+
+<button onclick="showHome()">Home</button>
+<button onclick="showToday()">Today</button>
+<button onclick="showMissions()">Missions</button>
+<button onclick="showGoals()">Goals</button>
+<button onclick="showMore()">More</button>
+
+<div id="screenText">
+  <h2>Home</h2>
+  <p>Welcome to Mission Control.</p>
+</div>
+
+<script>
+
+let missions = [];
+let todayPlan = [];
+let missionHistory = [];
+let weeklyGoals = [];
+let unfinishedFromYesterday = [];
+
+missions = JSON.parse(localStorage.getItem("missionControlMissions")) || [];
+todayPlan = JSON.parse(localStorage.getItem("missionControlTodayPlan")) || [];
+missionHistory = JSON.parse(localStorage.getItem("missionControlMissionHistory")) || [];
+weeklyGoals = JSON.parse(localStorage.getItem("missionControlWeeklyGoals")) || [];
+
+unfinishedFromYesterday = JSON.parse(
+  localStorage.getItem("missionControlUnfinishedYesterday")
+) || [];
+
+let availableMinutes = Number(localStorage.getItem("missionControlAvailableMinutes")) || 0;
+let dayStartTime = localStorage.getItem("missionControlDayStartTime") || "";
+
+const todayDate = new Date().toLocaleDateString();
+const lastTodayDate = localStorage.getItem("missionControlTodayDate");
+
+if (lastTodayDate !== todayDate) {
+   unfinishedFromYesterday = todayPlan.filter(function(mission) {
+    return mission.status !== "Complete" && mission.status !== "Skipped";
+  });
+
+  localStorage.setItem(
+    "missionControlUnfinishedYesterday",
+    JSON.stringify(unfinishedFromYesterday)
+  );
+
+  todayPlan = [];
+  
+  availableMinutes = 0;
+  localStorage.setItem("missionControlAvailableMinutes", "0");
+  
+  dayStartTime = "";
+  localStorage.setItem("missionControlDayStartTime", "");
+
+  localStorage.setItem("missionControlTodayPlan", JSON.stringify(todayPlan));
+  localStorage.setItem("missionControlTodayDate", todayDate);
+}
+
+todayPlan.forEach(function(mission) {
+  if (!mission.status) mission.status = "Not Started";
+});
+
+localStorage.setItem("missionControlTodayPlan", JSON.stringify(todayPlan));
+
+missions.forEach((mission, index) => {
+  if (!mission.id) mission.id = "T" + String(index + 1).padStart(3, "0");
+});
+
+localStorage.setItem("missionControlMissions", JSON.stringify(missions));
+
+function showMissions() {
+  let missionList = "";
+
+  missions.forEach(function(mission) {
+    missionList += `
+      <div class="card">
+        <h3>${mission.name}</h3>
+        <p>Task ID: ${mission.id || "Not Assigned"}</p>
+        <p>Category: ${mission.category}</p>
+        <p>Mission: ${mission.purpose}</p>
+        <p>Duration: ${mission.duration} min</p>
+        <p>Priority: ${mission.priority}</p>
+        <p>Ready: ${mission.ready || "Yes"}</p>
+        <button onclick="deleteMission('${mission.id}')">Delete Mission</button>
+      </div>
+    `;
+  });
+
+    if (missions.length === 0) {
+    missionList = `<p>No missions yet. Click + Add Mission to create your first mission.</p>`;
+  }
+
+  document.getElementById("screenText").innerHTML = `
+    <h2>Missions</h2>
+    <button onclick="showAddMission()">+ Add Mission</button>
+    ${missionList}
+  `;
+}
+
+function showAddMission() {
+  document.getElementById("screenText").innerHTML = `
+    <h2>Add Mission</h2>
+
+    <label>Task Name</label><br>
+    <input type="text" id="missionName"><br><br>
+
+    <label>Category</label><br>
+    <select id="missionCategory">
+      <option value="">Select Category</option>
+      <option>Spiritual</option>
+      <option>Trading</option>
+      <option>Health</option>
+      <option>Fitness</option>
+      <option>Reading</option>
+      <option>Family</option>
+      <option>Business</option>
+      <option>Home</option>
+      <option>Errands</option>
+      <option>Admin</option>
+      <option>Learning</option>
+      <option>Finance</option>
+      <option>Projects</option>
+      <option>Recharge</option>
+    </select><br><br>
+
+    <label>Mission</label><br>
+    <input type="text" id="missionPurpose"><br><br>
+
+    <label>Duration (minutes)</label><br>
+    <input type="number" id="missionDuration" min="1"><br><br>
+
+    <label>Priority</label><br>
+    <select id="missionPriority">
+      <option value="">Select Priority</option>
+      <option>Must Do</option>
+      <option>Should Do</option>
+      <option>Nice To Do</option>
+    </select><br><br>
+
+    <label>Ready?</label><br>
+    <select id="missionReady">
+      <option>Yes</option>
+      <option>No</option>
+    </select><br><br>
+
+    <button onclick="saveMission()">Save Mission</button>
+    <button onclick="showMissions()">Cancel</button>
+  `;
+}
+  
+  function saveMission() {
+
+  if (
+    !document.getElementById("missionName").value.trim() ||
+    !document.getElementById("missionCategory").value ||
+    !document.getElementById("missionPurpose").value.trim() ||
+    !document.getElementById("missionDuration").value ||
+    !document.getElementById("missionPriority").value
+  ) {
+    alert("Please complete all mission fields before saving.");
+    return;
+  }
+
+  const taskId = "T" + String(missions.length + 1).padStart(3, "0");  
+
+  const mission = {
+    id: taskId,
+    name: document.getElementById("missionName").value,
+    category: document.getElementById("missionCategory").value,
+    purpose: document.getElementById("missionPurpose").value,
+    duration: document.getElementById("missionDuration").value,
+    priority: document.getElementById("missionPriority").value, 
+    ready: document.getElementById("missionReady").value   
+  };
+
+  missions.push(mission);
+  localStorage.setItem("missionControlMissions", JSON.stringify(missions));
+  showMissions();
+}
+
+function deleteMission(taskId) {
+  const confirmed = confirm("Are you sure you want to delete this mission?");
+
+  if (!confirmed) return;
+
+  missions = missions.filter(mission => mission.id !== taskId);
+
+  localStorage.setItem(
+    "missionControlMissions",
+    JSON.stringify(missions)
+  );
+
+  showMissions();
+}
+
+function getStartOfWeek() {
+  const today = new Date();
+  const day = today.getDay();
+
+  const start = new Date(today);
+  start.setDate(today.getDate() - day);
+  start.setHours(0, 0, 0, 0);
+
+  return start;
+}
+
+function showGoals() {
+  let goalList = "";
+
+  weeklyGoals.forEach(function(goal) {
+    const linkedMission = missions.find(
+      mission => mission.id === goal.missionId
+    );
+
+const startOfWeek = getStartOfWeek();
+
+const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const completedThisWeek = missionHistory.filter(function(item) {
+  const sameMission =
+    item.id === goal.missionId ||
+    (linkedMission && item.name === linkedMission.name);
+
+  if (!sameMission || item.status !== "Complete" || !item.completedDate) {
+    return false;
+  }
+
+  const dateParts = item.completedDate.split("/");
+  const completedDate = new Date(
+    Number(dateParts[2]),
+    Number(dateParts[0]) - 1,
+    Number(dateParts[1])
+  );
+
+  return completedDate >= startOfWeek;
+}).length;
+
+const weeklyTracker = weekDays.map(function(dayName, index) {
+  const dayDate = new Date(startOfWeek);
+  dayDate.setDate(startOfWeek.getDate() + index);
+
+  const completedOnDay = missionHistory.some(function(item) {
+    if (
+      item.status !== "Complete" ||
+      !item.completedDate ||
+      item.id !== goal.missionId
+    ) {
+      return false;
+    }
+
+    return item.completedDate === dayDate.toLocaleDateString();
+  });
+
+  return `${dayName} ${completedOnDay ? "✓" : "—"}`;
+}).join(" · ");
+
+const goalPercent = Math.min(
+  100,
+  Math.round((completedThisWeek / goal.target) * 100)
+);
+
+
+    goalList += `
+      <div class="card">
+        <h3>${goal.name}</h3>
+        <p>Linked Mission: ${linkedMission ? linkedMission.name : "Unknown"}</p>
+        <p>Target: ${goal.target} times this week</p>
+        <p>Completed: ${completedThisWeek} / ${goal.target}</p>
+        <p>Remaining: ${Math.max(0, goal.target - completedThisWeek)}</p>
+        <p>Progress: ${goalPercent}%</p>
+        <p><strong>This Week:</strong> ${weeklyTracker}</p>
+        <progress value="${goalPercent}" max="100"></progress>
+      </div>
+    `;
+  });
+
+  document.getElementById("screenText").innerHTML = `
+    <h2>Goals</h2>
+    <button onclick="showAddWeeklyGoal()">+ Add Weekly Goal</button>
+    ${goalList}
+  `;
+}
+
+function showMore() {
+  document.getElementById("screenText").innerHTML = `
+    <h2>More</h2>
+    <button onclick="showHistory()">Mission History</button>   
+  `;
+}
+
+function showHome() {
+  const readyCount = missions.filter(mission => (mission.ready || "Yes") === "Yes").length;
+  const currentTask = todayPlan.find(mission => mission.status === "In Progress");
+  const nextTask = todayPlan.find(mission => mission.status === "Not Started");
+  const completedCount = todayPlan.filter(
+  mission => mission.status === "Complete"
+).length;
+
+const totalToday = todayPlan.filter(
+  mission => mission.status !== "Skipped"
+).length;
+
+const todayPercent =
+  totalToday === 0
+    ? 0
+    : Math.round((completedCount / totalToday) * 100);
+  const plannedMinutes = todayPlan.reduce(function(total, mission) {
+  if (mission.status === "Complete" || mission.status === "Skipped") {
+    return total;
+  }
+
+  return total + Number(mission.duration || 0);
+}, 0);  
+
+  const homeWeeklyGoal = weeklyGoals[0];
+
+let homeWeeklyCompleted = 0;
+let homeWeeklyPercent = 0;
+
+if (homeWeeklyGoal) {
+  const homeLinkedMission = missions.find(
+    mission => mission.id === homeWeeklyGoal.missionId
+  );
+
+  const startOfWeek = getStartOfWeek();
+
+  homeWeeklyCompleted = missionHistory.filter(function(item) {
+    const sameMission =
+      item.id === homeWeeklyGoal.missionId ||
+      (homeLinkedMission && item.name === homeLinkedMission.name);
+
+    if (!sameMission || item.status !== "Complete" || !item.completedDate) {
+      return false;
+    }
+
+    const dateParts = item.completedDate.split("/");
+    const completedDate = new Date(
+      Number(dateParts[2]),
+      Number(dateParts[0]) - 1,
+      Number(dateParts[1])
+    );
+
+    return completedDate >= startOfWeek;
+  }).length;
+
+  homeWeeklyPercent = Math.min(
+    100,
+    Math.round((homeWeeklyCompleted / homeWeeklyGoal.target) * 100)
+  );
+}
+
+  document.getElementById("screenText").innerHTML = `
+    <h2>Home</h2>
+    <p>Welcome to Mission Control.</p>
+
+    <div class="card">
+      <h3>Current Task</h3>
+      <p>${currentTask ? currentTask.name : "None"}</p>
+      <p>${currentTask && currentTask.currentSchedule ? `🕐 ${currentTask.currentSchedule}` : ""}</p>
+
+      ${currentTask ? `
+        <button onclick="changeTodayStatus('${currentTask.id}', 'Complete'); showHome();">
+      ✓ Complete
+    </button>
+
+    <button onclick="changeTodayStatus('${currentTask.id}', 'Skipped'); showHome();">
+      Skip
+    </button>
+  ` : ""}
+</div>
+
+    <div class="card">
+      <h3>Next Task</h3>
+      <p>${nextTask ? nextTask.name : "None"}</p>
+      <p>${nextTask && nextTask.currentSchedule ? `🕐 ${nextTask.currentSchedule}` : ""}</p>
+    </div>
+
+     <div class="card">
+      <h3>Today's Progress</h3>
+      <p>${completedCount} / ${totalToday} Complete - ${todayPercent}%</p>
+      <progress value="${todayPercent}" max="100"></progress>
+    </div>    
+    
+    <div class="card">
+      <h3>Weekly Goal</h3>
+      <p>${homeWeeklyGoal ? homeWeeklyGoal.name : "None"}</p>
+    </div>    
+
+    <div class="card">
+      <h3>Weekly Progress</h3>
+      <p>${homeWeeklyGoal ? `${homeWeeklyCompleted} / ${homeWeeklyGoal.target} - ${homeWeeklyPercent}%` : "No weekly goal"}</p>
+      ${homeWeeklyGoal ? `<progress value="${homeWeeklyPercent}" max="100"></progress>` : ""}
+    </div> 
+ 
+    <div class="card">
+      <h3>Ready Missions</h3>
+      <p>${readyCount}</p>
+    </div>
+
+    <div class="card">
+      <h3>Planned Time</h3>
+      <p>${plannedMinutes} min</p>
+    </div>
+  `;
+}
+
+function showToday() {
+   const readyMissions = missions.filter(mission => (mission.ready || "Yes") === "Yes" && !todayPlan.some(item =>   item.id === mission.id));
+   
+   const priorityOrder = {
+     "Must Do": 1,
+     "Should Do": 2,
+     "Nice To Do": 3
+};
+
+const plannedMinutes = todayPlan.reduce(function(total, mission) {
+  if (mission.status === "Complete" || mission.status === "Skipped") {
+    return total;
+  }
+
+  return total + Number(mission.duration || 0);
+}, 0);
+
+const remainingMinutes = Math.max(
+  0,
+  availableMinutes - plannedMinutes
+);
+
+let formattedStartTime = "";
+
+if (dayStartTime) {
+  const [hour, minute] = dayStartTime.split(":").map(Number);
+
+  const startDate = new Date();
+  startDate.setHours(hour, minute, 0, 0);
+
+  formattedStartTime = startDate.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+let dayEndTime = "";
+
+if (dayStartTime) {
+  const [startHour, startMinute] = dayStartTime.split(":").map(Number);
+
+  const endDate = new Date();
+  endDate.setHours(startHour, startMinute + availableMinutes, 0, 0);
+
+  dayEndTime = endDate.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+const overbookedMinutes = Math.max(
+  0,
+  plannedMinutes - availableMinutes
+);
+
+readyMissions.sort(function(a, b) {
+  const aFits = Number(a.duration || 0) <= remainingMinutes;
+  const bFits = Number(b.duration || 0) <= remainingMinutes;
+
+  if (aFits !== bFits) {
+    return aFits ? -1 : 1;
+  }
+
+  const priorityDifference =
+  (priorityOrder[a.priority] || 99) -
+  (priorityOrder[b.priority] || 99);
+
+if (priorityDifference !== 0) {
+  return priorityDifference;
+}
+
+return Number(a.duration || 0) - Number(b.duration || 0);});
+
+const recommendedMission = readyMissions.find(
+  mission => Number(mission.duration || 0) <= remainingMinutes
+);
+
+const shortestRemainingMission = [...readyMissions].sort(
+  (a, b) => Number(a.duration || 0) - Number(b.duration || 0)
+)[0];
+
+   let todayList = "";
+   let planList = "";
+   let scheduleList = "";
+
+   let unfinishedYesterdayList = "";
+
+unfinishedFromYesterday.forEach(function(mission) {
+  unfinishedYesterdayList += `
+    <div class="card">
+      <h3>${mission.name}</h3>
+      <p>${mission.duration} min • ${mission.priority}</p>
+      <button onclick="carryOverMission('${mission.id}')">Carry Over to Today</button>
+    </div>
+  `;
+});
+
+   readyMissions.forEach(function(mission) {
+     const missionMinutes = Number(mission.duration || 0);
+     const fitsToday = missionMinutes <= remainingMinutes;
+
+     todayList += `
+      <div class="card">
+      <h3>${mission.name}</h3>
+      <p>${mission.duration} min • ${mission.priority}</p>
+      <p>${fitsToday ? "✓ Fits Today" : "Not Enough Time"}</p>
+      <button onclick="addToToday('${mission.id}')">Yes - Add to Today</button>
+    </div>
+  `;
+});
+
+if (readyMissions.length === 0) {
+  todayList = `<p>No additional missions available.</p>`;
+}
+
+let scheduleCurrentTime = null;
+
+if (dayStartTime) {
+  const [scheduleHour, scheduleMinute] = dayStartTime.split(":").map(Number);
+
+  scheduleCurrentTime = new Date();
+  scheduleCurrentTime.setHours(scheduleHour, scheduleMinute, 0, 0);
+}
+
+
+
+todayPlan.forEach(function(mission) {
+  let missionStartTime = "";
+  let missionEndTime = "";
+
+  if (
+  scheduleCurrentTime &&
+  mission.status !== "Skipped" &&
+  mission.status !== "Complete"
+) {
+ 
+  missionStartTime = scheduleCurrentTime.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit"
+    });
+
+    const missionEndDate = new Date(
+      scheduleCurrentTime.getTime() + Number(mission.duration || 0) * 60000
+    );
+
+    missionEndTime = missionEndDate.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit"
+    });
+
+    mission.currentSchedule = `${missionStartTime} - ${missionEndTime}`;
+
+    scheduleCurrentTime = missionEndDate;
+  }
+
+   planList += `
+    
+    <div class="card">
+      <h3>${mission.name}</h3>
+      <p>🕐 ${mission.completedSchedule || `${missionStartTime} - ${missionEndTime}`}</p>
+      
+      ${mission.status !== "Complete" && mission.status !== "Skipped" ? `
+      <button onclick="moveMissionUp('${mission.id}')">↑ Up</button>
+      <button onclick="moveMissionDown('${mission.id}')">↓ Down</button>
+     ` : ""}    
+    
+      <p>${mission.duration} min • ${mission.priority}</p>
+      
+      <label>Status: </label>
+      <select onchange="changeTodayStatus('${mission.id}', this.value)">
+         <option ${mission.status === "Not Started" ? "selected" : ""}>Not Started</option>
+         <option ${mission.status === "In Progress" ? "selected" : ""}>In Progress</option>
+         <option ${mission.status === "Complete" ? "selected" : ""}>Complete</option>
+         <option ${mission.status === "Skipped" ? "selected" : ""}>Skipped</option>
+       </select>
+       <button onclick="removeFromToday('${mission.id}')">Remove from Today</button>
+    </div>
+  `;
+});
+ 
+if (todayPlan.length === 0) {
+  planList = `<p>No missions planned for today yet.</p>`;
+} 
+
+  document.getElementById("screenText").innerHTML = `
+    <h2>Today</h2>
+     
+    <div class="card">
+      <h3>Available Time Today</h3>
+      <input type="number" id="availableMinutesInput" min="0" value="${availableMinutes}" placeholder="Minutes">
+      
+      <br><br>
+      <label>Start My Day At:</label><br>
+      <input type="time" id="dayStartTimeInput" value="${dayStartTime}">
+      <br><br>       
+
+      <button onclick="saveAvailableMinutes()">Save Time</button>
+      <p>${availableMinutes > 0 ? `${availableMinutes} minutes available` : "No available time set"}</p>
+    </div>
+
+    <div class="card">
+      <h3>Time Summary</h3>
+      <p>Available: ${availableMinutes} min</p>
+      <p>Time Window: ${dayStartTime ? `${formattedStartTime} - ${dayEndTime}` : "Not Set"}</p>
+      <p>Planned: ${plannedMinutes} min</p>
+      <p>Remaining: ${remainingMinutes} min</p>
+      ${overbookedMinutes > 0 ? `<p>Overbooked: ${overbookedMinutes} min</p>` : ""}
+    </div>
+    
+<div class="card">
+  <h3>⭐ Recommended Next</h3>
+  ${
+    recommendedMission
+      ? `
+        <h3>${recommendedMission.name}</h3>
+        <p>${recommendedMission.duration} min • ${recommendedMission.priority}</p>
+        <p>✓ Fits your remaining ${remainingMinutes} minutes</p>
+        <button onclick="addToToday('${recommendedMission.id}')">Add Recommended to Today</button>
+      `
+      : shortestRemainingMission
+  ? `
+    <p>You have ${remainingMinutes} minutes remaining.</p>
+    <p>No remaining mission fits that time.</p>
+    <p><strong>Shortest remaining mission:</strong> ${shortestRemainingMission.name} — ${shortestRemainingMission.duration} min</p>
+    <p>You need ${Number(shortestRemainingMission.duration) - remainingMinutes} more minutes.</p>
+  `
+   : `<p>No missions remaining.</p>`
+  }
+</div>
+
+    ${unfinishedFromYesterday.length > 0 ? `
+  <h3>Unfinished From Yesterday</h3>
+  ${unfinishedYesterdayList}
+` : ""}
+
+<h3>Today's Plan</h3>
+${planList}
+
+<h3>Suggestions</h3>
+${todayList}
+ `;
+}
+
+function saveAvailableMinutes() {
+  availableMinutes = Number(
+    document.getElementById("availableMinutesInput").value
+  );
+
+  dayStartTime = document.getElementById("dayStartTimeInput").value;
+
+  localStorage.setItem(
+    "missionControlAvailableMinutes",
+    availableMinutes
+  );
+
+  localStorage.setItem(
+    "missionControlDayStartTime",
+    dayStartTime
+  );
+
+  showToday();
+}
+
+function addToToday(taskId) {
+  const mission = missions.find(mission => mission.id === taskId);
+  todayPlan.push({...mission, status: "Not Started", planOrder: todayPlan.length});
+  localStorage.setItem("missionControlTodayPlan", JSON.stringify(todayPlan));
+  showToday();
+}
+
+function carryOverMission(taskId) {
+  const mission = unfinishedFromYesterday.find(
+    mission => mission.id === taskId
+  );
+
+  if (!mission) return;
+
+  todayPlan.push({
+    ...mission,
+    status: "Not Started",
+    planOrder: todayPlan.length
+  });
+
+  unfinishedFromYesterday = unfinishedFromYesterday.filter(
+    mission => mission.id !== taskId
+  );
+
+  localStorage.setItem(
+    "missionControlTodayPlan",
+    JSON.stringify(todayPlan)
+  );
+
+  localStorage.setItem(
+    "missionControlUnfinishedYesterday",
+    JSON.stringify(unfinishedFromYesterday)
+  );
+
+  showToday();
+}
+
+function changeTodayStatus(taskId, newStatus) {
+  const mission = todayPlan.find(mission => mission.id === taskId);
+  
+  if (newStatus === "Complete" && mission.status !== "Complete" && !missionHistory.some(item => item.id === mission.id && item.completedDate ===     
+  new Date().toLocaleDateString())) {  
+  missionHistory.push({...mission, status: "Complete", completedDate: new Date().toLocaleDateString(), completedTime: new     
+  Date().toLocaleTimeString([], {hour: "numeric", minute: "2-digit"})});
+  localStorage.setItem("missionControlMissionHistory", JSON.stringify(missionHistory));
+}
+
+if (newStatus === "Skipped" && mission.status !== "Skipped" && !missionHistory.some(item => item.id === mission.id && item.skippedDate === new     
+   Date().toLocaleDateString())) {
+   missionHistory.push({...mission, status: "Skipped", skippedDate: new Date().toLocaleDateString(), skippedTime: new      
+   Date().toLocaleTimeString([], {hour: "numeric", minute: "2-digit"})});
+   localStorage.setItem("missionControlMissionHistory", JSON.stringify(missionHistory));
+}
+ 
+if (newStatus === "In Progress") {
+  todayPlan.forEach(function(item) {
+    if (item.id !== taskId && item.status === "In Progress") {
+      item.status = "Not Started";
+    }
+  });
+}
+
+ mission.status = newStatus;
+
+ if (newStatus === "Skipped") {
+  todayPlan = todayPlan.filter(item => item.id !== taskId);
+  todayPlan.push(mission);
+}
+
+if (newStatus === "Complete") {
+  if (!mission.completedSchedule) {
+    mission.completedSchedule = mission.currentSchedule || "";
+  }
+
+  todayPlan = todayPlan.filter(item => item.id !== taskId);
+  todayPlan.push(mission);
+}
+
+if (newStatus === "Complete" || newStatus === "Skipped") {
+  const alreadyInProgress = todayPlan.some(
+    item => item.status === "In Progress"
+  );
+
+  if (!alreadyInProgress) {
+    const nextMission = todayPlan.find(
+      item => item.status === "Not Started"
+    );
+
+    if (nextMission) {
+      nextMission.status = "In Progress";
+    }
+  }
+}
+  localStorage.setItem("missionControlTodayPlan", JSON.stringify(todayPlan));
+  showToday();
+}
+
+function removeFromToday(taskId) {
+  todayPlan = todayPlan.filter(mission => mission.id !== taskId);
+  localStorage.setItem("missionControlTodayPlan", JSON.stringify(todayPlan));
+  showToday();
+}
+
+function moveMissionUp(taskId) {
+  const index = todayPlan.findIndex(mission => mission.id === taskId);
+
+  if (index > 0) {
+    const missionAbove = todayPlan[index - 1];
+
+    todayPlan[index - 1] = todayPlan[index];
+    todayPlan[index] = missionAbove;
+
+    localStorage.setItem(
+      "missionControlTodayPlan",
+      JSON.stringify(todayPlan)
+    );
+
+    showToday();
+  }
+}
+
+function moveMissionDown(taskId) {
+  const index = todayPlan.findIndex(mission => mission.id === taskId);
+
+  if (index >= 0 && index < todayPlan.length - 1) {
+    const missionBelow = todayPlan[index + 1];
+
+    todayPlan[index + 1] = todayPlan[index];
+    todayPlan[index] = missionBelow;
+
+    localStorage.setItem(
+      "missionControlTodayPlan",
+      JSON.stringify(todayPlan)
+    );
+
+    showToday();
+  }
+}
+
+function showAddWeeklyGoal() {
+    let missionOptions = "";
+
+    missions.forEach(function(mission) {
+       missionOptions += `<option value="${mission.id}">${mission.name}</option>`;
+});
+
+    document.getElementById("screenText").innerHTML = `
+    <h2>Add Weekly Goal</h2>
+
+    <label>Weekly Goal</label><br>
+    <input type="text" id="weeklyGoalName"><br><br>
+    
+    <label>Linked Mission</label><br>
+    <select id="weeklyGoalMission">
+       ${missionOptions}
+    </select><br><br>
+
+    <label>Target Completions</label><br>
+    <input type="number" id="weeklyGoalTarget" min="1"><br><br>
+
+    <button onclick="saveWeeklyGoal()">Save Weekly Goal</button>
+    <button onclick="showGoals()">Cancel</button>
+  `;
+}
+
+function saveWeeklyGoal() {
+  const goal = {
+    id: "G" + String(weeklyGoals.length + 1).padStart(3, "0"),
+    name: document.getElementById("weeklyGoalName").value,
+    missionId: document.getElementById("weeklyGoalMission").value,
+    target: Number(document.getElementById("weeklyGoalTarget").value)
+  };
+
+  weeklyGoals.push(goal);
+
+  localStorage.setItem(
+    "missionControlWeeklyGoals",
+    JSON.stringify(weeklyGoals)
+  );
+
+  showGoals();
+}
+
+function showHistory() {
+  let historyList = "";
+
+[...missionHistory].reverse().forEach(function(mission) {  
+    historyList += `
+      <div class="card">
+        <h3>${mission.name}</h3>
+        <p>${mission.status === "Skipped" ? `Skipped: ${mission.skippedDate} at ${mission.skippedTime || "Time not recorded"}` : `Completed:   
+        ${mission.completedDate} at ${mission.completedTime || "Time not recorded"}`}</p>
+      </div>
+    `;
+  });
+
+  document.getElementById("screenText").innerHTML = `
+    <h2>Mission History</h2>
+    ${historyList}
+  `;
+}
+
+</script>
+
