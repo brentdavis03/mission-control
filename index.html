@@ -1047,9 +1047,27 @@ async function requestMissionNotifications() {
 }
 
 
+function testMissionNotification() {
+  if (!("Notification" in window)) {
+    alert("Notifications are not supported.");
+    return;
+  }
+
+  if (Notification.permission !== "granted") {
+    alert("Please enable notifications first.");
+    return;
+  }
+
+  new Notification("Mission Control", {
+    body: "This is your first Mission Control test reminder!"
+  });
+}
+
+
 </script>
 
 <button onclick="requestMissionNotifications()">Enable Notifications</button>
+<button onclick="testMissionNotification()">Test Notification</button>
 <button onclick="backupMissionControl()">Backup Mission Control</button>
 <button onclick="document.getElementById('restoreFile').click()">Restore Mission Control</button>
 <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restoreMissionControl(event)">
