@@ -1030,8 +1030,26 @@ location.reload();
   reader.readAsText(file);
 }
 
+
+async function requestMissionNotifications() {
+  if (!("Notification" in window)) {
+    alert("Notifications are not supported here.");
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+
+  if (permission === "granted") {
+    alert("Notification permission granted!");
+  } else {
+    alert("Notification permission was not granted.");
+  }
+}
+
+
 </script>
 
+<button onclick="requestMissionNotifications()">Enable Notifications</button>
 <button onclick="backupMissionControl()">Backup Mission Control</button>
 <button onclick="document.getElementById('restoreFile').click()">Restore Mission Control</button>
 <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restoreMissionControl(event)">
