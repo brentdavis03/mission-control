@@ -78,7 +78,7 @@ let dayStartTime = localStorage.getItem("missionControlDayStartTime") || "";
 const todayDate = new Date().toLocaleDateString();
 const lastTodayDate = localStorage.getItem("missionControlTodayDate");
 
-if (lastTodayDate !== todayDate) {
+if (lastTodayDate !== todayDate && localStorage.getItem('mcAutoSyncEnabled') !== 'yes') {
    unfinishedFromYesterday = todayPlan.filter(function(mission) {
     return mission.status !== "Complete" && mission.status !== "Skipped";
   });
@@ -1107,6 +1107,7 @@ async function cloudSignIn() {
   } catch(e) { mcStatus('Sign-in failed: ' + e.message); }
 }
 async function cloudSignOut() {
+  localStorage.removeItem('mcAutoSyncEnabled');
   await mcCloud.auth.signOut();
   mcStatus('Signed out. Local missions unchanged.');
 }
@@ -1122,6 +1123,7 @@ function mcSnapshot() {
 }
 async function cloudUploadFirst() {
   try {
+    if (localStorage.getItem('mcAutoSyncEnabled') === 'yes') throw new Error('Automatic sync is enabled. Manual upload is disabled.');
     const user = await cloudUser();
     const snapshot = mcSnapshot();
     const missionList = JSON.parse(snapshot.missionControlMissions || '[]');
@@ -1139,6 +1141,7 @@ async function cloudUploadFirst() {
 }
 async function cloudDownload() {
   try {
+    if (localStorage.getItem('mcAutoSyncEnabled') === 'yes') throw new Error('Turn off automatic sync before manual download.');
     const user = await cloudUser();
     const {data, error} = await mcCloud.from('mission_control_sync').select('app_data').eq('user_id',user.id).single();
     if (error) throw error;
@@ -1162,4 +1165,191 @@ async function cloudDownload() {
   } catch(e) { mcStatus('Download not completed: '+e.message); }
 }
 mcCloud.auth.getUser().then(({data}) => {if(data?.user) mcStatus('Signed in as '+data.user.email+'. No data has been transferred.');});
+</script>
+
+<!-- Automatic sync: opt in separately on each device. Cloud-first activation. -->
+<section class="card" style="background:#eefaf4" id="autoSyncPanel">
+  <h2>Automatic Sync</h2>
+  <p id="autoSyncStatus" role="status">Checking sync status…</p>
+  <button onclick="mcEnableAutoSync()">Enable Automatic Sync on This Device</button>
+  <button onclick="mcDisableAutoSync()">Pause Automatic Sync on This Device</button>
+  <p>Syncs changes while the app is open and connected. Other devices check for updates about every 15 seconds. This is not background push notification support.</p>
+</section>
+<script>
+(function () {
+  const originalSetItem = Storage.prototype.setItem;
+  const keysPrefix = 'missionControl';
+  let enabled = localStorage.getItem('mcAutoSyncEnabled') === 'yes';
+  let applyingRemote = false;
+  let pending = false;
+  let busy = false;
+  let timer = null;
+  let cloudVersion = null;
+  let lastSnapshot = '';
+  const statusEl = document.getElementById('autoSyncStatus');
+  const status = message => { statusEl.textContent = message; };
+  const canonical = obj => JSON.stringify(Object.keys(obj).sort().map(k => [k, obj[k]]));
+  const snapshotString = () => canonical(mcSnapshot());
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  Storage.prototype.setItem = function (key, value) {
+    const old = this.getItem(key);
+    originalSetItem.call(this, key, value);
+    if (this === localStorage && key.startsWith(keysPrefix) && old !== String(value) &&
+        enabled && !applyingRemote) {
+      pending = true;
+      clearTimeout(timer);
+      timer = setTimeout(() => { void syncOnce(); }, 1200);
+    }
+  };
+
+  async function readCloud() {
+    const user = await cloudUser();
+    const {data, error} = await mcCloud.from('mission_control_sync')
+      .select('app_data,updated_at').eq('user_id', user.id).single();
+    if (error) throw error;
+    const dataObj = data.app_data;
+    if (!dataObj || typeof dataObj !== 'object' || Array.isArray(dataObj) ||
+        !Object.keys(dataObj).every(k => k.startsWith(keysPrefix) && typeof dataObj[k] === 'string') ||
+        !Array.isArray(JSON.parse(dataObj.missionControlMissions || 'null')) ||
+        JSON.parse(dataObj.missionControlMissions).length === 0) {
+      throw new Error('Cloud record did not pass mission validation. No data changed.');
+    }
+    return data;
+  }
+
+  function backupLocal(filename) {
+    const blob = new Blob([JSON.stringify(mcSnapshot(), null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  function applyRemote(dataObj) {
+    applyingRemote = true;
+    try {
+      // Remove stale Mission Control fields that are absent in the cloud snapshot.
+      Object.keys(localStorage).filter(k => k.startsWith(keysPrefix) && !(k in dataObj))
+        .forEach(k => localStorage.removeItem(k));
+      Object.entries(dataObj).forEach(([k,v]) => originalSetItem.call(localStorage,k,v));
+      lastSnapshot = snapshotString();
+    } finally { applyingRemote = false; }
+  }
+
+  async function syncOnce() {
+    if (!enabled || busy || document.visibilityState === 'hidden') return;
+    busy = true;
+    try {
+      const cloud = await readCloud();
+      const remoteText = canonical(cloud.app_data);
+      const localText = snapshotString();
+      // Remote changed since last successful sync: do not overwrite it.
+      if (cloudVersion !== cloud.updated_at) {
+        if (pending && localText !== lastSnapshot) {
+          enabled = false;
+          localStorage.removeItem('mcAutoSyncEnabled');
+          status('Sync paused: changes on both devices. Back up this device before resolving the conflict.');
+          return;
+        }
+        if (localText !== remoteText) {
+          backupLocal('Mission-Control-Before-Auto-Refresh.json');
+          applyRemote(cloud.app_data);
+          cloudVersion = cloud.updated_at;
+          status('New cloud changes received. Refreshing the app…');
+          location.reload();
+          return;
+        }
+        cloudVersion = cloud.updated_at;
+      }
+      if (!pending) { status('Automatic sync on — up to date.'); return; }
+      if (localText === remoteText) {
+        pending = false;
+        lastSnapshot = localText;
+        status('Automatic sync on — up to date.');
+        return;
+      }
+      const user = await cloudUser();
+      const updatedAt = new Date().toISOString();
+      const {data, error} = await mcCloud.from('mission_control_sync')
+        .update({app_data: mcSnapshot(), updated_at:updatedAt})
+        .eq('user_id',user.id).eq('updated_at',cloudVersion)
+        .select('updated_at');
+      if (error) throw error;
+      if (!data || data.length !== 1) {
+        enabled = false;
+        localStorage.removeItem('mcAutoSyncEnabled');
+        status('Sync paused: cloud changed during save. Your local data is preserved.');
+        return;
+      }
+      cloudVersion = data[0].updated_at;
+      lastSnapshot = localText;
+      pending = snapshotString() !== localText;
+      status(pending ? 'Saving another change…' : 'Saved to cloud successfully.');
+    } catch (e) {
+      status('Sync could not complete: ' + e.message + '. Local data is preserved; will retry.');
+    } finally {
+      busy = false;
+      if (enabled && pending) {
+        clearTimeout(timer);
+        timer = setTimeout(() => { void syncOnce(); }, 4000);
+      }
+    }
+  }
+
+  window.mcEnableAutoSync = async function () {
+    if (enabled) { status('Automatic sync is already enabled on this device.'); return; }
+    try {
+      const cloud = await readCloud();
+      const localText = snapshotString();
+      const remoteText = canonical(cloud.app_data);
+      if (localText !== remoteText) {
+        const ok = confirm('To safely enable sync, this device must start with the cloud copy. A local backup will download first. Continue?');
+        if (!ok) return;
+        backupLocal('Mission-Control-Before-Enabling-Sync.json');
+        applyRemote(cloud.app_data);
+      }
+      cloudVersion = cloud.updated_at;
+      lastSnapshot = snapshotString();
+      pending = false;
+      enabled = true;
+      localStorage.setItem('mcAutoSyncEnabled','yes');
+      status('Automatic sync enabled. Cloud copy is current.');
+      if (localText !== remoteText) location.reload();
+    } catch(e) { status('Not enabled: ' + e.message); }
+  };
+
+  window.mcDisableAutoSync = function () {
+    enabled = false;
+    localStorage.removeItem('mcAutoSyncEnabled');
+    clearTimeout(timer);
+    status('Automatic sync paused on this device. Your local data is unchanged.');
+  };
+
+  async function resume() {
+    if (!enabled) { status('Off on this device. Sign in and select Enable Automatic Sync.'); return; }
+    try {
+      const cloud = await readCloud();
+      // After page reload, local state may have changed due to a new-day reset.
+      // Do not silently overwrite cloud with a fresh startup state.
+      cloudVersion = cloud.updated_at;
+      if (snapshotString() !== canonical(cloud.app_data)) {
+        backupLocal('Mission-Control-Before-Sync-Refresh.json');
+        applyRemote(cloud.app_data);
+        status('Cloud changes loaded. Refreshing…');
+        location.reload();
+        return;
+      }
+      lastSnapshot = snapshotString();
+      status('Automatic sync on — up to date.');
+    } catch(e) { status('Sync paused until sign-in/cloud is available: '+e.message); }
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && enabled) void syncOnce();
+  });
+  window.addEventListener('online', () => { if (enabled) void syncOnce(); });
+  setInterval(() => { if (enabled) void syncOnce(); }, 15000);
+  void resume();
+})();
 </script>
