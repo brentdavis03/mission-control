@@ -1072,3 +1072,94 @@ function testMissionNotification() {
 <button onclick="document.getElementById('restoreFile').click()">Restore Mission Control</button>
 <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restoreMissionControl(event)">
 
+
+
+<!-- Mission Control: cautious first-time cloud transfer (automatic sync is not enabled yet) -->
+<section id="cloudSetup" class="card" style="background:#f0f7ff">
+  <h2>Cloud Setup — First-Time Transfer</h2>
+  <p id="cloudStatus">Not signed in. Your local missions have not been changed.</p>
+  <label for="cloudEmail">Email</label><br>
+  <input id="cloudEmail" type="email" autocomplete="username" placeholder="Supabase account email"><br><br>
+  <label for="cloudPassword">Password</label><br>
+  <input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Password"><br><br>
+  <button onclick="cloudSignIn()">Sign In</button>
+  <button onclick="cloudSignOut()">Sign Out</button><br>
+  <button onclick="cloudUploadFirst()">1. Upload THIS Device's Missions</button>
+  <button onclick="cloudDownload()">2. Download Cloud Missions to THIS Device</button>
+  <p><strong>Important:</strong> On your iPhone, sign in and use Upload first. On your computer, use Download only after the iPhone upload succeeds. Never upload an empty computer to the cloud. Automatic sync is not active yet.</p>
+</section>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const mcCloud = window.supabase.createClient(
+  'https://pjbiebxgkbpbuarcinad.supabase.co',
+  'sb_publishable_zyWHbB4J7MdfwSBi4Z7-KQ_SwtGA2KE'
+);
+const mcStatus = (msg) => { document.getElementById('cloudStatus').textContent = msg; };
+async function cloudSignIn() {
+  try {
+    const email = document.getElementById('cloudEmail').value.trim();
+    const password = document.getElementById('cloudPassword').value;
+    if (!email || !password) { mcStatus('Enter your email and password on this device.'); return; }
+    const { data, error } = await mcCloud.auth.signInWithPassword({email, password});
+    document.getElementById('cloudPassword').value = '';
+    if (error) throw error;
+    mcStatus('Signed in as ' + data.user.email + '. No data has been transferred.');
+  } catch(e) { mcStatus('Sign-in failed: ' + e.message); }
+}
+async function cloudSignOut() {
+  await mcCloud.auth.signOut();
+  mcStatus('Signed out. Local missions unchanged.');
+}
+async function cloudUser() {
+  const {data, error} = await mcCloud.auth.getUser();
+  if (error || !data.user) throw new Error('Please sign in first.');
+  return data.user;
+}
+function mcSnapshot() {
+  const result = {};
+  Object.keys(localStorage).filter(k => k.startsWith('missionControl')).forEach(k => result[k] = localStorage.getItem(k));
+  return result;
+}
+async function cloudUploadFirst() {
+  try {
+    const user = await cloudUser();
+    const snapshot = mcSnapshot();
+    const missionList = JSON.parse(snapshot.missionControlMissions || '[]');
+    if (!Array.isArray(missionList) || missionList.length === 0) {
+      throw new Error('This device has no missions. Upload is blocked to protect your iPhone data.');
+    }
+    const {data: existing, error: readError} = await mcCloud.from('mission_control_sync').select('user_id').eq('user_id',user.id).maybeSingle();
+    if (readError) throw readError;
+    if (existing) throw new Error('Cloud already contains a record. Upload blocked to prevent overwriting.');
+    if (!confirm('Upload '+missionList.length+' missions from THIS device to your private cloud? This should be your iPhone.')) return;
+    const {error} = await mcCloud.from('mission_control_sync').insert({user_id:user.id, app_data:snapshot});
+    if (error) throw error;
+    mcStatus('Upload successful: '+missionList.length+' missions saved in cloud.');
+  } catch(e) { mcStatus('Upload not completed: '+e.message); }
+}
+async function cloudDownload() {
+  try {
+    const user = await cloudUser();
+    const {data, error} = await mcCloud.from('mission_control_sync').select('app_data').eq('user_id',user.id).single();
+    if (error) throw error;
+    const incoming = data.app_data;
+    if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) throw new Error('Invalid cloud data.');
+    const cloudMissions = JSON.parse(incoming.missionControlMissions || '[]');
+    if (!Array.isArray(cloudMissions) || cloudMissions.length === 0) throw new Error('Cloud has no missions; download blocked.');
+    const keys = Object.keys(incoming);
+    if (!keys.every(k => k.startsWith('missionControl') && typeof incoming[k] === 'string')) throw new Error('Cloud data failed validation.');
+    if (!confirm('Download '+cloudMissions.length+' cloud missions to THIS device? Existing local Mission Control data on this device will be replaced.')) return;
+    // Preserve local state before replacing anything.
+    const backup = JSON.stringify(mcSnapshot(), null, 2);
+    const blob = new Blob([backup], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url; link.download = 'Mission-Control-Before-Cloud-Download.json'; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    keys.forEach(k => localStorage.setItem(k, incoming[k]));
+    mcStatus('Download successful. Reloading to display cloud missions.');
+    location.reload();
+  } catch(e) { mcStatus('Download not completed: '+e.message); }
+}
+mcCloud.auth.getUser().then(({data}) => {if(data?.user) mcStatus('Signed in as '+data.user.email+'. No data has been transferred.');});
+</script>
