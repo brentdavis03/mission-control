@@ -1373,3 +1373,54 @@ if ("serviceWorker" in navigator) {
 const MISSION_VAPID_PUBLIC_KEY = "BFLSEq7wl-dDP3MxhbsbPLa-rQ4oDNVUJQZsdDh6_vcRTMB9nXcJNtmEd58gBM5bskRdGaUQEdwmItcX5DW-Spg";
 </script>
 
+
+<script>
+function missionPublicKeyToBytes(base64Url) {
+  const padding = "=".repeat((4 - base64Url.length % 4) % 4);
+  const base64 = (base64Url + padding)
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  const decoded = atob(base64);
+  return Uint8Array.from(decoded, char => char.charCodeAt(0));
+}
+
+async function subscribeMissionPush() {
+  try {
+    if (!("serviceWorker" in navigator) ||
+        !("PushManager" in window) ||
+        !("Notification" in window)) {
+      alert("Push notifications are not supported in this browser.");
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+
+    if (permission !== "granted") {
+      alert("Notification permission was not granted.");
+      return;
+    }
+
+    const registration = await navigator.serviceWorker.ready;
+
+    let subscription = await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: missionPublicKeyToBytes(
+          MISSION_VAPID_PUBLIC_KEY
+        )
+      });
+    }
+
+    alert("Push subscription created on this device. Server connection is still being configured.");
+  } catch (error) {
+    alert("Push subscription failed: " + error.message);
+  }
+}
+</script>
+
+<button onclick="subscribeMissionPush()">
+  Enable Background Push Notifications
+</button>
