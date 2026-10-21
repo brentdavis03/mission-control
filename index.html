@@ -772,17 +772,13 @@ if (newStatus === "In Progress") {
  mission.status = newStatus;
 
  if (newStatus === "Skipped") {
-  todayPlan = todayPlan.filter(item => item.id !== taskId);
-  todayPlan.push(mission);
+  // Keep the mission in its original scheduled position.
 }
 
 if (newStatus === "Complete") {
   if (!mission.completedSchedule) {
     mission.completedSchedule = mission.currentSchedule || "";
   }
-
-  todayPlan = todayPlan.filter(item => item.id !== taskId);
-  todayPlan.push(mission);
 }
 
 if (newStatus === "Complete" || newStatus === "Skipped") {
