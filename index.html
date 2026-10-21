@@ -1414,7 +1414,34 @@ async function subscribeMissionPush() {
       });
     }
 
-    alert("Push subscription created on this device. Server connection is still being configured.");
+    const user = await cloudUser();
+
+    if (!user) {
+      alert("Please sign in to Mission Control first.");
+      return;
+    }
+
+    const { error } = await mcCloud
+      .from("mission_notifications")
+      .insert({
+        user_id: user.id,
+        device_id: "iphone",
+        push_subscription: subscription.toJSON(),
+        reminder_time: new Date().toISOString(),
+        reminder_type: "subscription",
+        mission_name: "Push registration",
+        mission_id: "push-registration",
+        mission_status: "active",
+        sent: true
+      });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    alert("Your iPhone push subscription was saved to Supabase!");
+
+    
   } catch (error) {
     alert("Push subscription failed: " + error.message);
   }
