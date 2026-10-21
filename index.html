@@ -1447,3 +1447,54 @@ async function subscribeMissionPush() {
 <button onclick="subscribeMissionPush()">
   Enable Background Push Notifications
 </button>
+
+<script>
+function mcBuildMissionReminders() {
+  if (!dayStartTime || !todayPlan.length) return [];
+
+  const [hour, minute] = dayStartTime.split(":").map(Number);
+  const start = new Date();
+  start.setHours(hour, minute, 0, 0);
+
+  let nextStart = start.getTime();
+  const reminders = [];
+
+  todayPlan.forEach(function (mission) {
+    const missionStart = nextStart;
+    const duration = Number(mission.duration || 0);
+
+    // Keep time slots fixed for completed or skipped missions.
+    nextStart += duration * 60000;
+
+    if (mission.status === "Complete" ||
+        mission.status === "Skipped") {
+      return;
+    }
+
+    reminders.push({
+      mission_id: mission.id,
+      mission_name: mission.name,
+      reminder_type: "before",
+      reminder_time: new Date(
+        missionStart - 5 * 60000
+      ).toISOString(),
+      mission_status: mission.status,
+      sent: false
+    });
+
+    reminders.push({
+      mission_id: mission.id,
+      mission_name: mission.name,
+      reminder_type: "start",
+      reminder_time: new Date(
+        missionStart
+      ).toISOString(),
+      mission_status: mission.status,
+      sent: false
+    });
+  });
+
+  return reminders;
+}
+</script>
+
