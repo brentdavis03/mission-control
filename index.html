@@ -578,11 +578,7 @@ todayPlan.forEach(function(mission) {
   let missionStartTime = "";
   let missionEndTime = "";
 
-  if (
-  scheduleCurrentTime &&
-  mission.status !== "Skipped" &&
-  mission.status !== "Complete"
-) {
+ if (scheduleCurrentTime) {
  
   missionStartTime = scheduleCurrentTime.toLocaleTimeString([], {
       hour: "numeric",
@@ -607,7 +603,7 @@ todayPlan.forEach(function(mission) {
     
     <div class="card">
       <h3>${mission.name}</h3>
-      <p>🕐 ${mission.completedSchedule || `${missionStartTime} - ${missionEndTime}`}</p>
+     <p>🕐 Scheduled: ${missionStartTime} - ${missionEndTime}</p>
       
       ${mission.status !== "Complete" && mission.status !== "Skipped" ? `
       <button onclick="moveMissionUp('${mission.id}')">↑ Up</button>
