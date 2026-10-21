@@ -1422,7 +1422,7 @@ async function subscribeMissionPush() {
     }
 
     const { error } = await mcCloud
-      .from("mission_notifications")
+      .from("mision_notifications")
       .insert({
         user_id: user.id,
         device_id: "iphone",
