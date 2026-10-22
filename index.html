@@ -1499,7 +1499,11 @@ function mcBuildMissionReminders() {
 async function mcSaveMissionReminders() {
   try {
     const user = await cloudUser();
-    const reminders = mcBuildMissionReminders();
+    const now = Date.now();
+
+const reminders = mcBuildMissionReminders().filter(function(reminder) {
+  return new Date(reminder.reminder_time).getTime() > now;
+});
 
     // Only replace future, unsent reminders belonging to this user.
     const { error: deleteError } = await mcCloud
