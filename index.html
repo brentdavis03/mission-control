@@ -1494,3 +1494,44 @@ function mcBuildMissionReminders() {
 }
 </script>
 
+
+<script>
+async function mcSaveMissionReminders() {
+  try {
+    const user = await cloudUser();
+    const reminders = mcBuildMissionReminders();
+
+    // Only replace future, unsent reminders belonging to this user.
+    const { error: deleteError } = await mcCloud
+      .from("mision_notifications")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("sent", false)
+      .in("reminder_type", ["before", "start"]);
+
+    if (deleteError) throw deleteError;
+
+    if (reminders.length === 0) {
+      console.log("No mission reminders to save.");
+      return;
+    }
+
+    const rows = reminders.map(function(reminder) {
+      return {
+        ...reminder,
+        user_id: user.id
+      };
+    });
+
+    const { error: insertError } = await mcCloud
+      .from("mision_notifications")
+      .insert(rows);
+
+    if (insertError) throw insertError;
+
+    console.log("Mission reminders saved:", rows.length);
+  } catch (error) {
+    console.error("Could not save mission reminders:", error);
+  }
+}
+</script>
