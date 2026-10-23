@@ -75,7 +75,10 @@ unfinishedFromYesterday = JSON.parse(
 let availableMinutes = Number(localStorage.getItem("missionControlAvailableMinutes")) || 0;
 let dayStartTime = localStorage.getItem("missionControlDayStartTime") || "";
 
-const todayDate = new Date().toLocaleDateString();
+const todayDate = new Date().toLocaleDateString("en-US", {
+  timeZone: "America/New_York"
+});
+  
 const lastTodayDate = localStorage.getItem("missionControlTodayDate");
 
 if (lastTodayDate !== todayDate && localStorage.getItem('mcAutoSyncEnabled') !== 'yes') {
@@ -112,6 +115,36 @@ missions.forEach((mission, index) => {
 
 localStorage.setItem("missionControlMissions", JSON.stringify(missions));
 
+  function mcResetDailyPlan() {
+  const currentDate = new Date().toLocaleDateString("en-US", {
+    timeZone: "America/New_York"
+  });
+
+  if (localStorage.getItem("missionControlTodayDate") === currentDate) {
+    return false;
+  }
+
+  unfinishedFromYesterday = todayPlan.filter(function(mission) {
+    return mission.status !== "Complete" &&
+           mission.status !== "Skipped";
+  });
+
+  todayPlan = [];
+  availableMinutes = 0;
+  dayStartTime = "";
+
+  localStorage.setItem(
+    "missionControlUnfinishedYesterday",
+    JSON.stringify(unfinishedFromYesterday)
+  );
+  localStorage.setItem("missionControlTodayPlan", "[]");
+  localStorage.setItem("missionControlAvailableMinutes", "0");
+  localStorage.setItem("missionControlDayStartTime", "");
+  localStorage.setItem("missionControlTodayDate", currentDate);
+
+  return true;
+}
+  
 function showMissions() {
   let missionList = "";
 
@@ -1235,7 +1268,7 @@ mcCloud.auth.getUser().then(({data}) => {if(data?.user) mcStatus('Signed in as '
     try {
       const cloud = await readCloud();
       const remoteText = canonical(cloud.app_data);
-      const localText = snapshotString();
+      let localText = snapshotString();
       // Remote changed since last successful sync: do not overwrite it.
       if (cloudVersion !== cloud.updated_at) {
         if (pending && localText !== lastSnapshot) {
@@ -1254,6 +1287,12 @@ mcCloud.auth.getUser().then(({data}) => {if(data?.user) mcStatus('Signed in as '
         }
         cloudVersion = cloud.updated_at;
       }
+if (!pending && localText === remoteText && mcResetDailyPlan()) {
+  pending = true;
+  localText = snapshotString();
+  status('New day detected. Saving daily reset to cloud…');
+}
+      
       if (!pending) { status('Automatic sync on — up to date.'); return; }
       if (localText === remoteText) {
         pending = false;
@@ -1333,7 +1372,14 @@ mcCloud.auth.getUser().then(({data}) => {if(data?.user) mcStatus('Signed in as '
         return;
       }
       lastSnapshot = snapshotString();
-      status('Automatic sync on — up to date.');
+
+if (!pending && mcResetDailyPlan()) {
+  pending = true;
+  status('New day detected. Saving daily reset to cloud…');
+  void syncOnce();
+} else {
+  status('Automatic sync on — up to date.');
+}
     } catch(e) { status('Sync paused until sign-in/cloud is available: '+e.message); }
   }
 
