@@ -737,7 +737,8 @@ function saveAvailableMinutes() {
     dayStartTime
   );
 
-  showToday();
+    showToday();
+  mcSaveMissionReminders();
 }
 
 function addToToday(taskId) {
@@ -745,6 +746,7 @@ function addToToday(taskId) {
   todayPlan.push({...mission, status: "Not Started", planOrder: todayPlan.length});
   localStorage.setItem("missionControlTodayPlan", JSON.stringify(todayPlan));
   showToday();
+  mcSaveMissionReminders();
 }
 
 function carryOverMission(taskId) {
@@ -774,7 +776,8 @@ function carryOverMission(taskId) {
     JSON.stringify(unfinishedFromYesterday)
   );
 
-  showToday();
+    showToday();
+  mcSaveMissionReminders();
 }
 
 function changeTodayStatus(taskId, newStatus) {
@@ -829,14 +832,16 @@ if (newStatus === "Complete" || newStatus === "Skipped") {
     }
   }
 }
-  localStorage.setItem("missionControlTodayPlan", JSON.stringify(todayPlan));
+    localStorage.setItem("missionControlTodayPlan", JSON.stringify(todayPlan));
   showToday();
+  mcSaveMissionReminders();
 }
 
 function removeFromToday(taskId) {
   todayPlan = todayPlan.filter(mission => mission.id !== taskId);
   localStorage.setItem("missionControlTodayPlan", JSON.stringify(todayPlan));
-  showToday();
+    showToday();
+  mcSaveMissionReminders();
 }
 
 function moveMissionUp(taskId) {
@@ -853,7 +858,8 @@ function moveMissionUp(taskId) {
       JSON.stringify(todayPlan)
     );
 
-    showToday();
+        showToday();
+    mcSaveMissionReminders();
   }
 }
 
@@ -871,7 +877,8 @@ function moveMissionDown(taskId) {
       JSON.stringify(todayPlan)
     );
 
-    showToday();
+        showToday();
+    mcSaveMissionReminders();
   }
 }
 
@@ -1542,7 +1549,32 @@ function mcBuildMissionReminders() {
 
 
 <script>
-async function mcSaveMissionReminders() {
+
+  let mcReminderSaveTimer = null;
+let mcReminderSaveRunning = false;
+let mcReminderSavePending = false;
+
+function mcSaveMissionReminders() {
+  mcReminderSavePending = true;
+  clearTimeout(mcReminderSaveTimer);
+
+  mcReminderSaveTimer = setTimeout(async function () {
+    if (mcReminderSaveRunning) return;
+
+    mcReminderSaveRunning = true;
+
+    try {
+      while (mcReminderSavePending) {
+        mcReminderSavePending = false;
+        await mcSaveMissionRemindersNow();
+      }
+    } finally {
+      mcReminderSaveRunning = false;
+    }
+  }, 5000);
+}
+  
+async function mcSaveMissionRemindersNow() {
   try {
     const user = await cloudUser();
     const now = Date.now();
