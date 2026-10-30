@@ -780,6 +780,37 @@ function carryOverMission(taskId) {
   mcSaveMissionReminders();
 }
 
+function showMissionFinishPrompt(taskId) {
+  const mission = todayPlan.find(item => item.id === taskId);
+
+  if (!mission) {
+    showToday();
+    return;
+  }
+
+  if (mission.status === "Complete" || mission.status === "Skipped") {
+    showToday();
+    return;
+  }
+
+  document.getElementById("screenText").innerHTML = `
+    <h2>Mission Check-In</h2>
+
+    <div class="card">
+      <h3>Mission Check-In</h3>
+      <p>Did you finish this mission?</p>
+
+      <button onclick="changeTodayStatus('${mission.id}', 'Complete')">
+        ✓ Completed
+      </button>
+
+     <button onclick="showToday()">
+  Not Finished
+</button>
+    </div>
+  `;
+}
+  
 function changeTodayStatus(taskId, newStatus) {
   const mission = todayPlan.find(mission => mission.id === taskId);
   
@@ -1617,4 +1648,16 @@ const reminders = mcBuildMissionReminders().filter(function(reminder) {
     console.error("Could not save mission reminders:", error);
   }
 }
+</script>
+<script>
+window.addEventListener("load", function () {
+  const params = new URLSearchParams(window.location.search);
+  const missionId = params.get("finishMission");
+
+  if (!missionId) return;
+
+  window.history.replaceState({}, "", window.location.pathname);
+
+  showMissionFinishPrompt(missionId);
+});
 </script>
