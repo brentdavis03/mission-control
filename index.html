@@ -151,7 +151,7 @@ function showMissions() {
   missions.forEach(function(mission) {
     missionList += `
       <div class="card">
-        <h3>${mission.name}</h3>
+        <h3>Mission Check-In</h3>
         <p>Task ID: ${mission.id || "Not Assigned"}</p>
         <p>Category: ${mission.category}</p>
         <p>Mission: ${mission.purpose}</p>
@@ -1620,7 +1620,7 @@ const reminders = mcBuildMissionReminders().filter(function(reminder) {
 .delete()
 .eq("user_id", user.id)
 .eq("sent", false)
-.in("reminder_type", ["before", "start"])
+.in("reminder_type", ["before", "start", "end"])
 .gt("reminder_time", new Date().toISOString());
 
     if (deleteError) throw deleteError;
