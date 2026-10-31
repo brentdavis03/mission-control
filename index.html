@@ -1572,6 +1572,17 @@ function mcBuildMissionReminders() {
       mission_status: mission.status,
       sent: false
     });
+
+    reminders.push({
+      mission_id: mission.id,
+      mission_name: mission.name,
+      reminder_type: "end",
+      reminder_time: new Date(
+        missionStart + duration * 60000
+      ).toISOString(),
+      mission_status: mission.status,
+      sent: false
+    });
   });
 
   return reminders;
