@@ -1060,27 +1060,55 @@ if (todayPlan.length === 0) {
   document.getElementById("screenText").innerHTML = `
     <h2>Today</h2>
      
-    <div class="card">
-      <h3>Available Time Today</h3>
-      <input type="number" id="availableMinutesInput" min="0" value="${availableMinutes}" placeholder="Minutes">
-      
-      <br><br>
-      <label>Start My Day At:</label><br>
-      <input type="time" id="dayStartTimeInput" value="${dayStartTime}">
-      <br><br>       
+    
+    <div class="card" style="padding:12px; margin:8px 0;">
+      <h3 style="margin:0 0 10px;">Today's Schedule</h3>
 
-      <button onclick="saveAvailableMinutes()">Save Time</button>
-      <p>${availableMinutes > 0 ? `${availableMinutes} minutes available` : "No available time set"}</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
+        <div style="flex:1; min-width:110px;">
+          <label for="availableMinutesInput">Available Minutes</label>
+          <input
+            type="number"
+            id="availableMinutesInput"
+            min="0"
+            value="${availableMinutes}"
+            style="width:100%; margin-top:5px;"
+          >
+        </div>
+
+        <div style="flex:1; min-width:110px;">
+          <label for="dayStartTimeInput">Start My Day At</label>
+          <input
+            type="time"
+            id="dayStartTimeInput"
+            value="${dayStartTime}"
+            style="width:100%; margin-top:5px;"
+          >
+        </div>
+      </div>
+
+      <button onclick="saveAvailableMinutes()" style="margin:10px 0 6px;">
+        Save Time
+      </button>
+
+      <div style="border-top:1px solid #ddd; padding-top:9px; margin-top:5px; font-size:13px;">
+        <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+          <span><strong>Available:</strong> ${availableMinutes} min</span>
+          <span><strong>Planned:</strong> ${plannedMinutes} min</span>
+          <span><strong>Remaining:</strong> ${remainingMinutes} min</span>
+        </div>
+
+        <p style="margin:8px 0 0;">
+          <strong>Time Window:</strong>
+          ${dayStartTime ? `${formattedStartTime} - ${dayEndTime}` : "Not Set"}
+        </p>
+
+        ${overbookedMinutes > 0
+          ? `<p style="color:#b42318; margin:6px 0 0;"><strong>Overbooked:</strong> ${overbookedMinutes} min</p>`
+          : ""}
+      </div>
     </div>
 
-    <div class="card">
-      <h3>Time Summary</h3>
-      <p>Available: ${availableMinutes} min</p>
-      <p>Time Window: ${dayStartTime ? `${formattedStartTime} - ${dayEndTime}` : "Not Set"}</p>
-      <p>Planned: ${plannedMinutes} min</p>
-      <p>Remaining: ${remainingMinutes} min</p>
-      ${overbookedMinutes > 0 ? `<p>Overbooked: ${overbookedMinutes} min</p>` : ""}
-    </div>
     
 <div class="card">
   <h3>⭐ Recommended Next</h3>
