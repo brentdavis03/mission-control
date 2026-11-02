@@ -1,5 +1,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+/* Mission Control sticky navigation */
+.mc-top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  padding: 8px 4px;
+  background: #ffffff;
+  border-bottom: 1px solid #dddddd;
+}
+
+.mc-top-nav button {
+  min-width: 0;
+  margin: 0;
+  padding: 9px 2px;
+  border: 1px solid #cccccc;
+  border-radius: 8px;
+  background: #f5f5f5;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mc-top-nav button span {
+  display: block;
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+.mc-top-nav button small {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+}
+
+
 <style>
 
 body {
@@ -44,11 +81,30 @@ input, select, textarea {
 
 <h1>Mission Control</h1>
 
-<button onclick="showHome()">Home</button>
-<button onclick="showToday()">Today</button>
-<button onclick="showMissions()">Missions</button>
-<button onclick="showGoals()">Goals</button>
-<button onclick="showMore()">More</button>
+
+<nav class="mc-top-nav">
+  <button onclick="showHome()">
+    <span>⌂</span>
+    <small>Home</small>
+  </button>
+  <button onclick="showToday()">
+    <span>▦</span>
+    <small>Today</small>
+  </button>
+  <button onclick="showMissions()">
+    <span>☷</span>
+    <small>Missions</small>
+  </button>
+  <button onclick="showGoals()">
+    <span>◎</span>
+    <small>Goals</small>
+  </button>
+  <button onclick="showMore()">
+    <span>⋯</span>
+    <small>More</small>
+  </button>
+</nav>
+
 
 <div id="screenText">
   <h2>Home</h2>
@@ -754,7 +810,8 @@ function showHome() {
     </div>
   `;
 }
-
+showHome();
+  
 function showToday() {
    const readyMissions = missions.filter(mission => (mission.ready || "Yes") === "Yes" && !todayPlan.some(item =>   item.id === mission.id));
    
