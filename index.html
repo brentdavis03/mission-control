@@ -361,122 +361,198 @@ const goalPercent = Math.min(
 function showMore() {
   document.getElementById("screenText").innerHTML = `
     <h2>More</h2>
-    <button onclick="showHistory()">Mission History</button>   
+    <button onclick="showHistory()">Mission History</button>
   `;
 }
 
+
+
 function showHome() {
-  const readyCount = missions.filter(mission => (mission.ready || "Yes") === "Yes").length;
-  const currentTask = todayPlan.find(mission => mission.status === "In Progress");
-  const nextTask = todayPlan.find(mission => mission.status === "Not Started");
+  const readyCount = missions.filter(
+    m => (m.ready || "Yes") === "Yes"
+  ).length;
+
+  const currentTask = todayPlan.find(
+    m => m.status === "In Progress"
+  );
+
+  const nextTask = todayPlan.find(
+    m => m.status === "Not Started"
+  );
+
   const completedCount = todayPlan.filter(
-  mission => mission.status === "Complete"
-).length;
+    m => m.status === "Complete"
+  ).length;
 
-const totalToday = todayPlan.filter(
-  mission => mission.status !== "Skipped"
-).length;
+  const activeMissions = todayPlan.filter(
+    m => m.status !== "Skipped"
+  );
 
-const todayPercent =
-  totalToday === 0
-    ? 0
-    : Math.round((completedCount / totalToday) * 100);
-  const plannedMinutes = todayPlan.reduce(function(total, mission) {
-  if (mission.status === "Complete" || mission.status === "Skipped") {
-    return total;
-  }
+  const totalToday = activeMissions.length;
+  const remainingCount = activeMissions.filter(
+    m => m.status !== "Complete"
+  ).length;
 
-  return total + Number(mission.duration || 0);
-}, 0);  
+  const todayPercent = totalToday
+    ? Math.round(completedCount / totalToday * 100)
+    : 0;
+
+  const plannedMinutes = activeMissions
+    .filter(m => m.status !== "Complete")
+    .reduce((sum, m) => sum + Number(m.duration || 0), 0);
 
   const homeWeeklyGoal = weeklyGoals[0];
+  let homeWeeklyCompleted = 0;
+  let homeWeeklyPercent = 0;
 
-let homeWeeklyCompleted = 0;
-let homeWeeklyPercent = 0;
-
-if (homeWeeklyGoal) {
-  const homeLinkedMission = missions.find(
-    mission => mission.id === homeWeeklyGoal.missionId
-  );
-
-  const startOfWeek = getStartOfWeek();
-
-  homeWeeklyCompleted = missionHistory.filter(function(item) {
-    const sameMission =
-      item.id === homeWeeklyGoal.missionId ||
-      (homeLinkedMission && item.name === homeLinkedMission.name);
-
-    if (!sameMission || item.status !== "Complete" || !item.completedDate) {
-      return false;
-    }
-
-    const dateParts = item.completedDate.split("/");
-    const completedDate = new Date(
-      Number(dateParts[2]),
-      Number(dateParts[0]) - 1,
-      Number(dateParts[1])
+  if (homeWeeklyGoal) {
+    const linked = missions.find(
+      m => m.id === homeWeeklyGoal.missionId
     );
 
-    return completedDate >= startOfWeek;
-  }).length;
+    const startOfWeek = getStartOfWeek();
 
-  homeWeeklyPercent = Math.min(
-    100,
-    Math.round((homeWeeklyCompleted / homeWeeklyGoal.target) * 100)
+    homeWeeklyCompleted = missionHistory.filter(item => {
+      const sameMission =
+        item.id === homeWeeklyGoal.missionId ||
+        (linked && item.name === linked.name);
+
+      if (!sameMission ||
+          item.status !== "Complete" ||
+          !item.completedDate) return false;
+
+      const parts = item.completedDate.split("/");
+      const completedDate = new Date(
+        Number(parts[2]),
+        Number(parts[0]) - 1,
+        Number(parts[1])
+      );
+
+      return completedDate >= startOfWeek;
+    }).length;
+
+    homeWeeklyPercent = homeWeeklyGoal.target > 0
+      ? Math.min(100, Math.round(
+          homeWeeklyCompleted / homeWeeklyGoal.target * 100
+        ))
+      : 0;
+  }
+
+  const dashboardDate = new Date().toLocaleDateString(
+    "en-US",
+    { weekday: "long", month: "long", day: "numeric" }
   );
-}
 
   document.getElementById("screenText").innerHTML = `
-    <h2>Home</h2>
-    <p>Welcome to Mission Control.</p>
+    <style>
+      .mc-dashboard .card {
+        padding: 12px;
+        margin: 8px 0;
+      }
+      .mc-dashboard h3 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+      .mc-dashboard p {
+        margin: 6px 0;
+      }
+      .mc-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .mc-stat {
+        border: 1px solid #888;
+        border-radius: 10px;
+        padding: 12px 5px;
+        text-align: center;
+        min-width: 0;
+      }
+      .mc-stat strong {
+        display: block;
+        font-size: 24px;
+      }
+      .mc-stat small {
+        font-size: 12px;
+      }
+      .mc-dashboard progress {
+        width: 100%;
+        height: 14px;
+      }
+      .mc-dashboard button {
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+    </style>
 
-    <div class="card">
-      <h3>Current Task</h3>
-      <p>${currentTask ? currentTask.name : "None"}</p>
-      <p>${currentTask && currentTask.currentSchedule ? `🕐 ${currentTask.currentSchedule}` : ""}</p>
+    <div class="mc-dashboard">
+      <h2>Home</h2>
+      <p>${dashboardDate}</p>
 
-      ${currentTask ? `
-        <button onclick="changeTodayStatus('${currentTask.id}', 'Complete'); showHome();">
-      ✓ Complete
-    </button>
-
-    <button onclick="changeTodayStatus('${currentTask.id}', 'Skipped'); showHome();">
-      Skip
-    </button>
-  ` : ""}
-</div>
-
-    <div class="card">
-      <h3>Next Task</h3>
-      <p>${nextTask ? nextTask.name : "None"}</p>
-      <p>${nextTask && nextTask.currentSchedule ? `🕐 ${nextTask.currentSchedule}` : ""}</p>
-    </div>
-
-     <div class="card">
       <h3>Today's Progress</h3>
-      <p>${completedCount} / ${totalToday} Complete - ${todayPercent}%</p>
+      <div class="mc-stats">
+        <div class="mc-stat">
+          <strong>${completedCount}</strong>
+          <small>Completed</small>
+        </div>
+        <div class="mc-stat">
+          <strong>${remainingCount}</strong>
+          <small>Remaining</small>
+        </div>
+        <div class="mc-stat">
+          <strong>${plannedMinutes}</strong>
+          <small>Minutes Left</small>
+        </div>
+      </div>
+
+      <p>${completedCount} of ${totalToday} complete — ${todayPercent}%</p>
       <progress value="${todayPercent}" max="100"></progress>
-    </div>    
-    
-    <div class="card">
-      <h3>Weekly Goal</h3>
-      <p>${homeWeeklyGoal ? homeWeeklyGoal.name : "None"}</p>
-    </div>    
 
-    <div class="card">
-      <h3>Weekly Progress</h3>
-      <p>${homeWeeklyGoal ? `${homeWeeklyCompleted} / ${homeWeeklyGoal.target} - ${homeWeeklyPercent}%` : "No weekly goal"}</p>
-      ${homeWeeklyGoal ? `<progress value="${homeWeeklyPercent}" max="100"></progress>` : ""}
-    </div> 
- 
-    <div class="card">
-      <h3>Ready Missions</h3>
-      <p>${readyCount}</p>
-    </div>
+      <div class="card">
+        <h3>Current Task</h3>
+        <p><strong>${currentTask ? currentTask.name : "None"}</strong></p>
+        ${currentTask && currentTask.currentSchedule
+          ? `<p>🕐 ${currentTask.currentSchedule}</p>` : ""}
+        ${currentTask ? `
+          <button onclick="changeTodayStatus('${currentTask.id}', 'Complete'); showHome();">✓ Complete</button>
+          <button onclick="changeTodayStatus('${currentTask.id}', 'Skipped'); showHome();">Skip</button>
+        ` : ""}
+      </div>
 
-    <div class="card">
-      <h3>Planned Time</h3>
-      <p>${plannedMinutes} min</p>
+      <div class="card">
+        <h3>Next Task</h3>
+        <p><strong>${nextTask ? nextTask.name : "None"}</strong></p>
+        ${nextTask && nextTask.currentSchedule
+          ? `<p>🕐 ${nextTask.currentSchedule}</p>` : ""}
+      </div>
+
+      <div class="card">
+        <h3>Weekly Goal</h3>
+        <p>${homeWeeklyGoal ? homeWeeklyGoal.name : "None"}</p>
+        <p>${homeWeeklyGoal
+          ? `${homeWeeklyCompleted} / ${homeWeeklyGoal.target} — ${homeWeeklyPercent}%`
+          : "No weekly goal set"}</p>
+        ${homeWeeklyGoal
+          ? `<progress value="${homeWeeklyPercent}" max="100"></progress>`
+          : ""}
+      </div>
+
+      <div class="mc-stats">
+        <div class="mc-stat">
+          <strong>${readyCount}</strong>
+          <small>Ready Missions</small>
+        </div>
+        <div class="mc-stat">
+          <strong>${totalToday}</strong>
+          <small>Today's Missions</small>
+        </div>
+        <div class="mc-stat">
+          <strong>${todayPercent}%</strong>
+          <small>Daily Progress</small>
+        </div>
+      </div>
+
+      <button onclick="showToday()">View Today's Plan</button>
     </div>
   `;
 }
