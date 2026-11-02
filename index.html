@@ -1064,8 +1064,12 @@ if (todayPlan.length === 0) {
     <div class="card" style="padding:12px; margin:8px 0;">
       <h3 style="margin:0 0 10px;">Today's Schedule</h3>
 
-      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
-        <div style="flex:1; min-width:110px;">
+     
+<div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; width:100%; box-sizing:border-box;">
+
+       
+<div style="min-width:0; width:100%; box-sizing:border-box;">
+
           <label for="availableMinutesInput">Available Minutes</label>
           <input
             type="number"
