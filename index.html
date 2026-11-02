@@ -76,6 +76,55 @@ input, select, textarea {
   box-sizing: border-box;
   width: 100%;
 }
+  
+/* Compact expandable Today's Plan */
+.mc-today-task {
+  border: 1px solid #cccccc;
+  border-radius: 10px;
+  margin: 7px 0;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.mc-today-task > summary {
+  padding: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.mc-today-task > summary::-webkit-details-marker {
+  display: none;
+}
+
+.mc-today-task-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.mc-today-task-heading strong {
+  font-size: 15px;
+}
+
+.mc-today-task-heading span {
+  font-size: 13px;
+  color: #666666;
+  white-space: nowrap;
+}
+
+.mc-today-task-meta {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #666666;
+}
+
+.mc-today-task-controls {
+  padding: 12px;
+  border-top: 1px solid #eeeeee;
+  background: #f7f7f7;
+}
+
 </style>
 
 <h1>Mission Control</h1>
@@ -962,29 +1011,46 @@ todayPlan.forEach(function(mission) {
     scheduleCurrentTime = missionEndDate;
   }
 
-   planList += `
-    
-    <div class="card">
-      <h3>${mission.name}</h3>
-     <p>🕐 Scheduled: ${missionStartTime} - ${missionEndTime}</p>
-      
+   
+planList += `
+  <details class="mc-today-task">
+    <summary>
+      <div class="mc-today-task-heading">
+        <strong>${mission.name}</strong>
+        <span>${mission.duration} min</span>
+      </div>
+
+      <div class="mc-today-task-meta">
+        ${missionStartTime && missionEndTime
+          ? `${missionStartTime} - ${missionEndTime} · `
+          : ""}
+        ${mission.priority} · ${mission.status}
+      </div>
+    </summary>
+
+    <div class="mc-today-task-controls">
       ${mission.status !== "Complete" && mission.status !== "Skipped" ? `
-      <button onclick="moveMissionUp('${mission.id}')">↑ Up</button>
-      <button onclick="moveMissionDown('${mission.id}')">↓ Down</button>
-     ` : ""}    
-    
-      <p>${mission.duration} min • ${mission.priority}</p>
-      
-      <label>Status: </label>
-      <select onchange="changeTodayStatus('${mission.id}', this.value)">
-         <option ${mission.status === "Not Started" ? "selected" : ""}>Not Started</option>
-         <option ${mission.status === "In Progress" ? "selected" : ""}>In Progress</option>
-         <option ${mission.status === "Complete" ? "selected" : ""}>Complete</option>
-         <option ${mission.status === "Skipped" ? "selected" : ""}>Skipped</option>
-       </select>
-       <button onclick="removeFromToday('${mission.id}')">Remove from Today</button>
+        <button onclick="moveMissionUp('${mission.id}')">↑ Up</button>
+        <button onclick="moveMissionDown('${mission.id}')">↓ Down</button>
+      ` : ""}
+
+      <p>
+        <label>Status:</label>
+        <select onchange="changeTodayStatus('${mission.id}', this.value)">
+          <option ${mission.status === "Not Started" ? "selected" : ""}>Not Started</option>
+          <option ${mission.status === "In Progress" ? "selected" : ""}>In Progress</option>
+          <option ${mission.status === "Complete" ? "selected" : ""}>Complete</option>
+          <option ${mission.status === "Skipped" ? "selected" : ""}>Skipped</option>
+        </select>
+      </p>
+
+      <button onclick="removeFromToday('${mission.id}')">
+        Remove from Today
+      </button>
     </div>
-  `;
+  </details>
+`;
+
 });
  
 if (todayPlan.length === 0) {
