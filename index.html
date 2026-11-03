@@ -1867,10 +1867,15 @@ if (!pending && mcResetDailyPlan()) {
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function () {
-    navigator.serviceWorker.register("./sw.js")
-      .then(function () {
-        console.log("Mission Control service worker registered.");
-      })
+    
+navigator.serviceWorker.register("./sw.js")
+  .then(function (registration) {
+    console.log("Mission Control service worker registered.");
+    registration.update().catch(function (error) {
+      console.warn("Service worker update check failed:", error);
+    });
+  })
+
       .catch(function (error) {
         console.error("Service worker registration failed:", error);
       });
