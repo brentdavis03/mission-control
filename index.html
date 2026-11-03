@@ -1,4 +1,5 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="mc-app-version" content="1.0.1">
 
 <style>
 
@@ -859,7 +860,47 @@ function showHome() {
   `;
 }
 showHome();
-  
+ 
+let mcLastVersionCheck = 0;
+
+async function mcCheckForAppUpdate() {
+  if (!navigator.onLine || Date.now() - mcLastVersionCheck < 60000) return;
+
+  mcLastVersionCheck = Date.now();
+
+  try {
+    const response = await fetch("./index.html?mcVersionCheck=" + Date.now(), {
+      cache: "no-store"
+    });
+
+    if (!response.ok) return;
+
+    const html = await response.text();
+    const match = html.match(/<meta name="mc-app-version" content="([^"]+)">/);
+
+    if (!match) return;
+
+    const latestVersion = match[1];
+    const currentVersion = document.querySelector('meta[name="mc-app-version"]')?.content;
+
+    if (currentVersion && latestVersion !== currentVersion) {
+      window.location.reload();
+    }
+  } catch (error) {
+    console.warn("Mission Control update check failed:", error);
+  }
+}
+
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState === "visible") {
+    void mcCheckForAppUpdate();
+  }
+});
+
+window.addEventListener("pageshow", function () {
+  void mcCheckForAppUpdate();
+});
+ 
 function showToday() {
    const readyMissions = missions.filter(mission => (mission.ready || "Yes") === "Yes" && !todayPlan.some(item =>   item.id === mission.id));
    
