@@ -1,5 +1,5 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="mc-app-version" content="1.0.4">
+<meta name="mc-app-version" content="1.0.5">
 
 <style>
 
@@ -139,8 +139,7 @@ document.getElementById("mcVersionDisplay").textContent =
 </script>
 
 
-<nav class="mc-top-nav">
-  <button onclick="showHome()">
+<nav class="mc-top-nav" onclick="if(event.target.closest('button')) mcCloseMoreSettings();">
     <span>⌂</span>
     <small>Home</small>
   </button>
@@ -676,12 +675,104 @@ const goalPercent = Math.min(
     ${goalList}
   `;
 }
+function mcCloseMoreSettings() {
+  const panelIds = [
+    "cloudSetup",
+    "autoSyncPanel",
+    "mcNotificationSettings",
+    "mcBackupSettings"
+  ];
 
+  panelIds.forEach(function(id) {
+    const panel = document.getElementById(id);
+
+    if (panel) {
+      panel.style.display = "none";
+      document.body.appendChild(panel);
+    }
+  });
+}
 function showMore() {
+  mcCloseMoreSettings();
+
   document.getElementById("screenText").innerHTML = `
     <h2>More</h2>
-    <button onclick="showHistory()">Mission History</button>
+
+    <div class="card">
+      <button onclick="showHistory()">📋 Mission History</button>
+    </div>
+
+    <div class="card">
+      <button onclick="mcShowMoreSection('cloudSetup')">
+        ☁️ Cloud Setup
+      </button>
+    </div>
+
+    <div class="card">
+      <button onclick="mcShowMoreSection('autoSyncPanel')">
+        🔄 Automatic Sync
+      </button>
+    </div>
+
+    <div class="card">
+      <button onclick="mcShowMoreSection('mcNotificationSettings')">
+        🔔 Notifications
+      </button>
+    </div>
+
+        <div class="card">
+      <button onclick="mcShowMoreSection('mcBackupSettings')">
+        💾 Backup & Restore
+      </button>
+    </div>
+
+    <div id="mcMoreContent"></div>
   `;
+}
+
+function mcShowMoreSection(sectionId) {
+  const panelIds = [
+    "cloudSetup",
+    "autoSyncPanel",
+    "mcNotificationSettings",
+    "mcBackupSettings"
+  ];
+
+  if (!panelIds.includes(sectionId)) {
+    alert("Unknown settings section.");
+    return;
+  }
+
+    panelIds.forEach(function(id) {
+    const panel = document.getElementById(id);
+
+    if (panel) {
+      panel.style.display = "none";
+      document.body.appendChild(panel);
+    }
+  });
+
+  const section = document.getElementById(sectionId);
+
+  if (!section) {
+    alert("This section is not ready yet.");
+    return;
+  }
+
+    const moreContent = document.getElementById("mcMoreContent");
+
+  if (!moreContent) {
+    alert("Please open the More page first.");
+    return;
+  }
+
+  moreContent.appendChild(section);
+  section.style.display = "block";
+
+  moreContent.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
 }
 
 
@@ -1620,16 +1711,41 @@ function testMissionNotification() {
 
 </script>
 
-<button onclick="requestMissionNotifications()">Enable Notifications</button>
-<button onclick="testMissionNotification()">Test Notification</button>
-<button onclick="backupMissionControl()">Backup Mission Control</button>
-<button onclick="document.getElementById('restoreFile').click()">Restore Mission Control</button>
-<input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restoreMissionControl(event)">
+<section id="mcNotificationSettings" class="card" style="display:none;">
+  <h2>Notifications</h2>
+
+  <button onclick="requestMissionNotifications()">
+    Enable Notifications
+  </button>
+
+  <button onclick="testMissionNotification()">
+    Test Notification
+  </button>
+</section>
+<section id="mcBackupSettings" class="card" style="display:none;">
+  <h2>Backup & Restore</h2>
+
+  <button onclick="backupMissionControl()">
+    Backup Mission Control
+  </button>
+
+  <button onclick="document.getElementById('restoreFile').click()">
+    Restore Mission Control
+  </button>
+
+  <input
+    type="file"
+    id="restoreFile"
+    accept=".json"
+    style="display:none"
+    onchange="restoreMissionControl(event)"
+  >
+</section>
 
 
 
 <!-- Mission Control: cautious first-time cloud transfer (automatic sync is not enabled yet) -->
-<section id="cloudSetup" class="card" style="background:#f0f7ff">
+<section id="cloudSetup" class="card" style="background:#f0f7ff; display:none;">
   <h2>Cloud Setup — First-Time Transfer</h2>
   <p id="cloudStatus">Not signed in. Your local missions have not been changed.</p>
   <label for="cloudEmail">Email</label><br>
@@ -1722,7 +1838,7 @@ mcCloud.auth.getUser().then(({data}) => {if(data?.user) mcStatus('Signed in as '
 </script>
 
 <!-- Automatic sync: opt in separately on each device. Cloud-first activation. -->
-<section class="card" style="background:#eefaf4" id="autoSyncPanel">
+<section class="card" style="background:#eefaf4; display:none;" id="autoSyncPanel">
   <h2>Automatic Sync</h2>
   <p id="autoSyncStatus" role="status">Checking sync status…</p>
   <button onclick="mcEnableAutoSync()">Enable Automatic Sync on This Device</button>
