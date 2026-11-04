@@ -1,5 +1,5 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="mc-app-version" content="1.0.7">
+<meta name="mc-app-version" content="1.0.8">
 
 <style>
 
@@ -1718,8 +1718,12 @@ function testMissionNotification() {
     Enable Notifications
   </button>
 
-  <button onclick="testMissionNotification()">
+    <button onclick="testMissionNotification()">
     Test Notification
+  </button>
+
+  <button onclick="subscribeMissionPush()">
+    Enable Background Push Notifications
   </button>
 </section>
 <section id="mcBackupSettings" class="card" style="display:none;">
@@ -2136,9 +2140,6 @@ async function subscribeMissionPush() {
 }
 </script>
 
-<button onclick="subscribeMissionPush()">
-  Enable Background Push Notifications
-</button>
 
 <script>
 function mcBuildMissionReminders() {
