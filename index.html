@@ -1,5 +1,5 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="mc-app-version" content="1.0.6">
+<meta name="mc-app-version" content="1.0.7">
 
 <style>
 
@@ -745,13 +745,13 @@ function mcShowMoreSection(sectionId) {
   }
 
     panelIds.forEach(function(id) {
-    const panel = document.getElementById(id);
+  const panel = document.getElementById(id);
 
-    if (panel) {
-      panel.style.display = "none";
-      document.body.appendChild(panel);
-    }
-  });
+  if (panel) {
+    panel.style.setProperty("display", "none", "important");
+    document.body.appendChild(panel);
+  }
+});
 
   const section = document.getElementById(sectionId);
 
@@ -767,9 +767,8 @@ function mcShowMoreSection(sectionId) {
     return;
   }
 
-  moreContent.appendChild(section);
-  section.style.display = "block";
-
+ moreContent.appendChild(section);
+section.style.setProperty("display", "block", "important");
   moreContent.scrollIntoView({
     behavior: "smooth",
     block: "start"
