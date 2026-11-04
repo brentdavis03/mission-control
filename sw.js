@@ -37,13 +37,13 @@ tag: message.tag || (
 self.addEventListener("notificationclick", function (event) {
   event.notification.close();
 
+  const data = event.notification.data || {};
+
+  const url = data.missionId
+    ? "./?finishMission=" + encodeURIComponent(data.missionId)
+    : (data.url || "./");
+
   event.waitUntil(
-    clients.openWindow(
-  event.notification.data.reminderType === "end" &&
-  event.notification.data.missionId
-    ? "./?finishMission=" +
-      encodeURIComponent(event.notification.data.missionId)
-    : event.notification.data.url
-)
+    clients.openWindow(url)
   );
 });
