@@ -1161,7 +1161,7 @@ todayPlan.forEach(function(mission) {
 
    
 planList += `
-  <details class="mc-today-task">
+  <details class="mc-today-task" data-mission-id="${mission.id}">
     <summary>
       <div class="mc-today-task-heading">
         <strong>${mission.name}</strong>
@@ -1322,7 +1322,25 @@ function saveAvailableMinutes() {
     showToday();
   mcSaveMissionReminders();
 }
+function mcOpenMissionExpanded(missionId) {
+  showToday();
 
+  const missionRows = document.querySelectorAll(
+    ".mc-today-task"
+  );
+
+  const matchingMission = Array.from(missionRows).find(
+    row => row.dataset.missionId === missionId
+  );
+
+  if (matchingMission) {
+    matchingMission.open = true;
+    matchingMission.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  }
+}
 function addToToday(taskId) {
   const mission = missions.find(mission => mission.id === taskId);
   todayPlan.push({...mission, status: "Not Started", planOrder: todayPlan.length});
@@ -2282,6 +2300,6 @@ window.addEventListener("load", function () {
 
   window.history.replaceState({}, "", window.location.pathname);
 
-  showMissionFinishPrompt(missionId);
+  mcOpenMissionExpanded(missionId);
 });
 </script>
