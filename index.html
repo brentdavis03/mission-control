@@ -1339,8 +1339,21 @@ function mcOpenMissionExpanded(missionId) {
       behavior: "smooth",
       block: "center"
     });
+    }
   }
+// Open the correct mission when a notification is tapped
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("message", function (event) {
+    if (event.data && event.data.type === "OPEN_MISSION") {
+      const missionId = event.data.missionId;
+
+      setTimeout(function () {
+        mcOpenMissionExpanded(missionId);
+      }, 300);
+    }
+  });
 }
+
 function addToToday(taskId) {
   const mission = missions.find(mission => mission.id === taskId);
   todayPlan.push({...mission, status: "Not Started", planOrder: todayPlan.length});
