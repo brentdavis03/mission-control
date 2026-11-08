@@ -43,7 +43,29 @@ self.addEventListener("notificationclick", function (event) {
     ? "./?finishMission=" + encodeURIComponent(data.missionId)
     : (data.url || "./");
 
-  event.waitUntil(
-    clients.openWindow(url)
-  );
+  event.waitUntil((async function () {
+    const windows = await clients.matchAll({
+      type: "window",
+      includeUncontrolled: true
+    });
+
+    const existingWindow = windows.find(client =>
+      client.url.startsWith(self.registration.scope)
+    );
+
+    if (existingWindow) {
+      await existingWindow.focus();
+
+      if (data.missionId) {
+        existingWindow.postMessage({
+          type: "OPEN_MISSION",
+          missionId: data.missionId
+        });
+      }
+
+      return;
+    }
+
+    await clients.openWindow(url);
+  })());
 });
