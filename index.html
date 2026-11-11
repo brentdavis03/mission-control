@@ -301,13 +301,7 @@ function addMissionCategory() {
 }  
 
 function showMissions() {
-  const categories = [
-    "Spiritual", "Trading", "Health", "Fitness",
-    "Reading", "Family", "Business", "Home",
-    "Errands", "Admin", "Learning", "Finance",
-    "Projects", "Recharge"
-  ];
-
+  const categories = missionCategories;
   const escapeHTML = value => String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -321,8 +315,6 @@ function showMissions() {
     const categoryMissions = missions.filter(
       mission => mission.category === category
     );
-
-    if (categoryMissions.length === 0) return;
 
     let missionList = "";
 
