@@ -175,8 +175,20 @@ let todayPlan = [];
 let missionHistory = [];
 let weeklyGoals = [];
 let unfinishedFromYesterday = [];
-
+let missionCategories = JSON.parse(localStorage.getItem("missionControlCategories")) || [];
+  
 missions = JSON.parse(localStorage.getItem("missionControlMissions")) || [];
+// Import existing mission categories without changing any missions
+if (missionCategories.length === 0) {
+  missionCategories = [...new Set(
+    missions.map(mission => mission.category).filter(Boolean)
+  )];
+
+  localStorage.setItem(
+    "missionControlCategories",
+    JSON.stringify(missionCategories)
+  );
+}
 todayPlan = JSON.parse(localStorage.getItem("missionControlTodayPlan")) || [];
 missionHistory = JSON.parse(localStorage.getItem("missionControlMissionHistory")) || [];
 weeklyGoals = JSON.parse(localStorage.getItem("missionControlWeeklyGoals")) || [];
@@ -257,7 +269,36 @@ localStorage.setItem("missionControlMissions", JSON.stringify(missions));
 
   return true;
 }
-  
+function addMissionCategory() {
+  const categoryName = prompt("Enter a new category name:");
+
+  if (categoryName === null) return;
+
+  const name = categoryName.trim();
+
+  if (!name) {
+    alert("Please enter a category name.");
+    return;
+  }
+
+  const alreadyExists = missionCategories.some(
+    category => category.toLowerCase() === name.toLowerCase()
+  );
+
+  if (alreadyExists) {
+    alert("This category already exists.");
+    return;
+  }
+
+  missionCategories.push(name);
+
+  localStorage.setItem(
+    "missionControlCategories",
+    JSON.stringify(missionCategories)
+  );
+
+  showMissions();
+}  
 
 function showMissions() {
   const categories = [
@@ -386,7 +427,8 @@ function showMissions() {
     </style>
 
     <h2>Mission Library</h2>
-    <button onclick="showAddMission()">+ Add Mission</button>
+<button onclick="addMissionCategory()">+ New Category</button>
+<button onclick="showAddMission()">+ Add Mission</button>
 
     ${categoryList || "<p>No missions yet. Add your first mission.</p>"}
   `;
