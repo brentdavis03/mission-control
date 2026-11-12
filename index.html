@@ -1399,6 +1399,10 @@ if ("serviceWorker" in navigator) {
 }
 
 function addToToday(taskId) {
+    if (todayPlan.some(mission => mission.id === taskId)) {
+    alert("This mission is already in Today's Plan.");
+    return;
+  }
   const mission = missions.find(mission => mission.id === taskId);
   todayPlan.push({...mission, status: "Not Started", planOrder: todayPlan.length});
   localStorage.setItem("missionControlTodayPlan", JSON.stringify(todayPlan));
