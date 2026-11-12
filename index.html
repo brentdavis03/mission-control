@@ -329,7 +329,7 @@ function showMissions() {
         <details class="mc-mission-row">
   <summary>
     <span>${escapeHTML(mission.name || "Unnamed Mission")}</span>
-    <button type="button"
+    <button type="button" style="font-size:11px; padding:4px 8px; margin:0 0 0 6px; border-radius:5px;"
       ${todayPlan.some(item => item.id === mission.id) ? "disabled" : ""}
       onclick="event.preventDefault(); event.stopPropagation(); addToToday('${mission.id}');">
       ${todayPlan.some(item => item.id === mission.id) ? "✓ Added" : "+ Today"}
