@@ -312,9 +312,13 @@ function showMissions() {
   let categoryList = "";
 
   categories.forEach(function(category) {
-    const categoryMissions = missions.filter(
-      mission => mission.category === category
-    );
+   const categoryMissions = missions
+  .filter(mission => mission.category === category)
+  .sort((a, b) =>
+    (a.name || "").localeCompare(b.name || "", undefined, {
+      sensitivity: "base"
+    })
+  );
 
     let missionList = "";
 
