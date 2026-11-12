@@ -1138,9 +1138,10 @@ const shortestRemainingMission = [...readyMissions].sort(
    let scheduleList = "";
 
    let unfinishedYesterdayList = "";
-
-unfinishedYesterdayList += `
-  <details class="mc-today-task">
+  
+unfinishedFromYesterday.forEach(function(mission) {
+  unfinishedYesterdayList += `
+    <details class="mc-today-task">
     <summary>
       <div class="mc-today-task-heading">
         <strong>${mission.name}</strong>
