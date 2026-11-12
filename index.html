@@ -1154,12 +1154,24 @@ unfinishedFromYesterday.forEach(function(mission) {
      const fitsToday = missionMinutes <= remainingMinutes;
 
      todayList += `
-      <div class="card">
-      <h3>${mission.name}</h3>
-      <p>${mission.duration} min • ${mission.priority}</p>
-      <p>${fitsToday ? "✓ Fits Today" : "Not Enough Time"}</p>
-      <button onclick="addToToday('${mission.id}')">Yes - Add to Today</button>
+      <details class="mc-today-task">
+  <summary>
+    <div class="mc-today-task-heading">
+      <strong>${mission.name}</strong>
+      <span>${mission.duration} min</span>
     </div>
+
+    <div class="mc-today-task-meta">
+      ${mission.priority} · ${fitsToday ? "✓ Fits Today" : "Not Enough Time"}
+    </div>
+  </summary>
+
+  <div class="mc-today-task-controls">
+    <button onclick="addToToday('${mission.id}')">
+      + Add to Today
+    </button>
+  </div>
+</details>
   `;
 });
 
