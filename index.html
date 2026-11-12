@@ -327,7 +327,13 @@ function showMissions() {
 
       missionList += `
         <details class="mc-mission-row">
-          <summary>${escapeHTML(mission.name || "Unnamed Mission")}</summary>
+  <summary>
+    <span>${escapeHTML(mission.name || "Unnamed Mission")}</span>
+    <button type="button"
+      onclick="event.preventDefault(); event.stopPropagation(); addToToday('${mission.id}');">
+      + Today
+    </button>
+  </summary>
 
           <div class="mc-mission-details">
             <p><strong>Task ID:</strong> ${escapeHTML(mission.id)}</p>
