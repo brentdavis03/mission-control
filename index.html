@@ -1139,14 +1139,26 @@ const shortestRemainingMission = [...readyMissions].sort(
 
    let unfinishedYesterdayList = "";
 
-unfinishedFromYesterday.forEach(function(mission) {
-  unfinishedYesterdayList += `
-    <div class="card">
-      <h3>${mission.name}</h3>
-      <p>${mission.duration} min • ${mission.priority}</p>
-      <button onclick="carryOverMission('${mission.id}')">Carry Over to Today</button>
+unfinishedYesterdayList += `
+  <details class="mc-today-task">
+    <summary>
+      <div class="mc-today-task-heading">
+        <strong>${mission.name}</strong>
+        <span>${mission.duration} min</span>
+      </div>
+
+      <div class="mc-today-task-meta">
+        ${mission.priority} · Unfinished
+      </div>
+    </summary>
+
+    <div class="mc-today-task-controls">
+      <button onclick="carryOverMission('${mission.id}')">
+        Carry Over to Today
+      </button>
     </div>
-  `;
+  </details>
+`;
 });
 
    readyMissions.forEach(function(mission) {
